@@ -2654,11 +2654,14 @@ export function createWorld(scene, quality = 'medium') {
     [-61.2, 87.2, 'tourist'], [-63.8, 93.8, 'photo'], [-68.0, 90.7, 'walk'], [-71.4, 87.3, 'sit'],
     [-74.5, 94.0, 'phone'], [-77.2, 90.3, 'tourist'], [-79.0, 86.5, 'talk'],
   ];
+  // A readable crowd matters more than rendering every single citizen at
+  // once. The trimmed variants retain every activity type while substantially
+  // reducing character animation and shadow work on browsers.
   const activePlacement = quality === 'low'
     ? placement.filter((_, index) => index % 2 === 0)
     : quality === 'medium'
-      ? placement.filter((_, index) => index % 5 !== 1)
-      : placement;
+      ? placement.filter((_, index) => index % 3 !== 1)
+      : placement.filter((_, index) => index % 4 !== 1);
   activePlacement.forEach(([x, z, mode], index) => {
     const routes = [
       [new THREE.Vector3(-17, -0, -4.8), new THREE.Vector3(-3.4, 0, -4.9), new THREE.Vector3(5.8, 0, -4.2), new THREE.Vector3(18, 0, -3.8)],
@@ -2719,7 +2722,7 @@ export function createWorld(scene, quality = 'medium') {
   const sun = new THREE.DirectionalLight(0xffb064, 3.22);
   sun.position.set(-28, 30, 14);
   sun.castShadow = true;
-  const shadowSize = quality === 'high' ? 2048 : quality === 'medium' ? 1024 : 512;
+  const shadowSize = quality === 'high' ? 1536 : quality === 'medium' ? 768 : 512;
   sun.shadow.mapSize.set(shadowSize, shadowSize);
   sun.shadow.camera.left = -104;
   sun.shadow.camera.right = 70;
@@ -2779,8 +2782,11 @@ export function createWorld(scene, quality = 'medium') {
       });
       if (!corrected) break;
     }
-    resolved.x = THREE.MathUtils.clamp(resolved.x, -72.6, 63.6);
-    resolved.z = THREE.MathUtils.clamp(resolved.z, -75.6, 87.6);
+    // The station lies beyond the west end of Christophstraße.  These limits
+    // must include its whole forecourt; the old prototype bounds stopped the
+    // player several metres before the road and made the Bahnhof unreachable.
+    resolved.x = THREE.MathUtils.clamp(resolved.x, -96.0, 63.6);
+    resolved.z = THREE.MathUtils.clamp(resolved.z, -75.6, 106.0);
     return resolved;
   }
 
@@ -3033,9 +3039,12 @@ export function createWorld(scene, quality = 'medium') {
       return position;
     },
     getLocation(position) {
-      if (position.x < -58 && position.x > -96 && position.z > 76 && position.z < 105) return { name: 'Hauptbahnhof Trier', zone: 'hauptbahnhof' };
-      if (position.x < -16 && position.x > -62 && position.z > 80 && position.z < 100) return { name: 'Christophstraße', zone: 'christophstrasse' };
-      if (position.x > 15 && position.x < 50 && position.z > 64 && position.z < 77) return { name: 'Christophstraße', zone: 'christophstrasse' };
+      if (position.x < -56 && position.x > -96 && position.z > 75 && position.z < 106) return { name: 'Hauptbahnhof Trier', zone: 'hauptbahnhof' };
+      // Covers both the wide left-hand exit from the Porta forecourt and the
+      // long western shopping street, so the HUD never falls back to
+      // Hauptmarkt while the player is already on Christophstraße.
+      if (position.x < -12 && position.x > -62 && position.z > 72 && position.z < 101) return { name: 'Christophstraße', zone: 'christophstrasse' };
+      if (position.x > 13 && position.x < 52 && position.z > 47 && position.z < 79) return { name: 'Christophstraße', zone: 'christophstrasse' };
       if (position.x > 8 && position.x < 18 && position.z > 51 && position.z < 86) return { name: 'Simeonstraße', zone: 'simeonstrasse' };
       if (position.x > -21 && position.x < 9 && position.z > 57) return { name: 'Porta Nigra', zone: 'porta' };
       if (Math.abs(position.x) < 9 && position.z > 17) return { name: 'Simeonstraße', zone: 'simeonstrasse' };
