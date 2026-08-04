@@ -1386,6 +1386,11 @@ function addPortaForecourt(parent, quality) {
   addStreetBin(forecourt, 1.5, 63.1, -.2);
   addStreetMusicCorner(forecourt, -15.2, 71.9);
   addStreetSign(forecourt, 4.5, 57.9, 'SIMEONSTRASSE', 0);
+  // The western exit is deliberately signposted at eye level.  It is the
+  // readable start of the long Christophstraße rather than a hidden route
+  // behind the Porta's left tower.
+  addStreetSign(forecourt, -18.25, 80.15, 'CHRISTOPHSTRASSE', Math.PI / 2);
+  addLabel(forecourt, 'ZUM HAUPTBAHNHOF  ←', -17.4, 3.35, 82.15, .52, '#efc979');
   addWindFlag(forecourt, -18.2, 58.0, 0xa96445, .12, 81);
   addWindFlag(forecourt, 4.75, 58.0, 0x547164, -.12, 82);
   parent.add(forecourt);
@@ -1543,10 +1548,15 @@ function addWestChristophstrasseToStation(parent, quality) {
   // The new long Christophstraße deliberately grows from the opposite side of
   // the Porta. It keeps the previously built eastern branch intact while
   // giving the western side the proper city-scale connection requested here.
-  const connector = new THREE.Mesh(new THREE.PlaneGeometry(8.0, 15.2), pavingMaterial(8.0, 15.2, 0xd1b38b, 441));
-  connector.rotation.set(-Math.PI / 2, -.74, 0);
-  connector.position.set(-19.25, -.016, 86.35);
+  // A real, broad L-turn begins at the left edge of the Porta forecourt. The
+  // previous diagonal only touched the district visually, which made the
+  // station connection easy to miss while playing. This lane stays clear of
+  // the Porta's west tower and physically overlaps both pieces of paving.
+  const connector = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 18.0), pavingMaterial(9.4, 18.0, 0xd1b38b, 441));
+  connector.rotation.x = -Math.PI / 2;
+  connector.position.set(-18.1, -.016, 83.4);
   district.add(connector);
+  for (const connectorX of [-22.65, -13.55]) addBox(district, { x: connectorX, y: -.01, z: 83.4, w: .065, h: .04, d: 17.6, color: 0x756d62, roughness: .78, bevel: .008 });
   const street = new THREE.Mesh(new THREE.PlaneGeometry(44.5, 8.55), pavingMaterial(44.5, 8.55, 0xd4b88e, 442));
   street.rotation.x = -Math.PI / 2;
   street.position.set(-41.6, -.016, 90.0);
@@ -1571,7 +1581,8 @@ function addWestChristophstrasseToStation(parent, quality) {
   addSimeonCafeTables(district, -44.5, 93.25, 2);
   addBicycle(district, -34.5, 86.2, .1);
   addBikeRack(district, -48.6, 94.0, Math.PI / 2);
-  addStreetSign(district, -24.0, 88.2, 'CHRISTOPHSTRASSE', -Math.PI / 2);
+  addStreetSign(district, -18.0, 87.8, 'CHRISTOPHSTRASSE', -Math.PI / 2);
+  addLabel(district, 'HAUPTBAHNHOF  ←', -21.7, 3.2, 86.4, .5, '#efc979');
 
   // The street releases into a dedicated station square. Its broad paving and
   // clear gap in front of the façade make the Hauptbahnhof a destination, not
