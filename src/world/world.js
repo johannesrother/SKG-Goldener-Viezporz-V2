@@ -1387,9 +1387,9 @@ function addPortaForecourt(parent, quality) {
   addStreetMusicCorner(forecourt, -15.2, 71.9);
   addStreetSign(forecourt, 4.5, 57.9, 'SIMEONSTRASSE', 0);
   // The western exit is deliberately signposted at eye level.  It is the
-  // readable start of the long Christophstraße rather than a hidden route
+  // readable start of the long Margaretengäßchen rather than a hidden route
   // behind the Porta's left tower.
-  addStreetSign(forecourt, -18.25, 80.15, 'CHRISTOPHSTRASSE', Math.PI / 2);
+  addStreetSign(forecourt, -18.25, 80.15, 'MARGARETENGÄSSCHEN', Math.PI / 2);
   addLabel(forecourt, 'ZUM HAUPTBAHNHOF  ←', -17.4, 3.35, 82.15, .52, '#efc979');
   addWindFlag(forecourt, -18.2, 58.0, 0xa96445, .12, 81);
   addWindFlag(forecourt, 4.75, 58.0, 0x547164, -.12, 82);
@@ -1541,11 +1541,11 @@ function addHauptbahnhof(parent, x, z, quality) {
   return markSolid(station, { type: 'box', width: 24.2, depth: 7.3, height: 8.0, padding: .12 }, { cameraFade: true });
 }
 
-function addWestChristophstrasseToStation(parent, quality) {
+function addMargaretengaesschenToStation(parent, quality) {
   const district = new THREE.Group();
-  district.name = 'Christophstraße – Porta Nigra zum Hauptbahnhof';
+  district.name = 'Margaretengäßchen – Porta Nigra zum Hauptbahnhof';
 
-  // The new long Christophstraße deliberately grows from the opposite side of
+  // The long Margaretengäßchen deliberately grows from the opposite side of
   // the Porta. It keeps the previously built eastern branch intact while
   // giving the western side the proper city-scale connection requested here.
   // A real, broad L-turn begins at the left edge of the Porta forecourt. The
@@ -1581,7 +1581,7 @@ function addWestChristophstrasseToStation(parent, quality) {
   addSimeonCafeTables(district, -44.5, 93.25, 2);
   addBicycle(district, -34.5, 86.2, .1);
   addBikeRack(district, -48.6, 94.0, Math.PI / 2);
-  addStreetSign(district, -18.0, 87.8, 'CHRISTOPHSTRASSE', -Math.PI / 2);
+  addStreetSign(district, -18.0, 87.8, 'MARGARETENGÄSSCHEN', -Math.PI / 2);
   addLabel(district, 'HAUPTBAHNHOF  ←', -21.7, 3.2, 86.4, .5, '#efc979');
 
   // The street releases into a dedicated station square. Its broad paving and
@@ -1650,7 +1650,7 @@ function addSimeonstrasse(parent, quality) {
   addPortaForecourt(street, quality);
   addPortaSimeonEdge(street, quality);
   addChristophstrasse(street);
-  addWestChristophstrasseToStation(street, quality);
+  addMargaretengaesschenToStation(street, quality);
   // The larger civic forecourt leaves a full visual breath before the Roman
   // gate. Its offset keeps the monument dominant while opening the east edge
   // for the actual Simeonstraße / Christophstraße junction.
@@ -2646,7 +2646,7 @@ export function createWorld(scene, quality = 'medium') {
     [-7.2, 68.2, 'child'], [-5.9, 69.0, 'child'], [-2.7, 67.9, 'feed'], [10.8, 66.6, 'walk'],
     [12.5, 61.8, 'walk'], [14.7, 65.9, 'shop'], [12.5, 75.3, 'talk'], [15.2, 78.8, 'tourist'],
     [25.3, 69.2, 'photo'], [38.9, 59.4, 'phone'], [41.0, 67.6, 'bike'], [38.8, 52.7, 'walk'],
-    // Christophstraße on the west side now leads through a longer shopping
+    // Margaretengäßchen on the west side now leads through a longer shopping
     // stretch to the station. The people thin out slightly in the terminal
     // square, leaving the station façade readable from the street.
     [-23.4, 88.0, 'walk'], [-27.8, 92.0, 'shop'], [-32.5, 87.5, 'talk'], [-38.4, 92.0, 'bike'],
@@ -2782,7 +2782,7 @@ export function createWorld(scene, quality = 'medium') {
       });
       if (!corrected) break;
     }
-    // The station lies beyond the west end of Christophstraße.  These limits
+    // The station lies beyond the west end of Margaretengäßchen. These limits
     // must include its whole forecourt; the old prototype bounds stopped the
     // player several metres before the road and made the Bahnhof unreachable.
     resolved.x = THREE.MathUtils.clamp(resolved.x, -96.0, 63.6);
@@ -3042,8 +3042,8 @@ export function createWorld(scene, quality = 'medium') {
       if (position.x < -56 && position.x > -96 && position.z > 75 && position.z < 106) return { name: 'Hauptbahnhof Trier', zone: 'hauptbahnhof' };
       // Covers both the wide left-hand exit from the Porta forecourt and the
       // long western shopping street, so the HUD never falls back to
-      // Hauptmarkt while the player is already on Christophstraße.
-      if (position.x < -12 && position.x > -62 && position.z > 72 && position.z < 101) return { name: 'Christophstraße', zone: 'christophstrasse' };
+      // Hauptmarkt while the player is already on Margaretengäßchen.
+      if (position.x < -12 && position.x > -62 && position.z > 72 && position.z < 101) return { name: 'Margaretengäßchen', zone: 'margaretengaesschen' };
       if (position.x > 13 && position.x < 52 && position.z > 47 && position.z < 79) return { name: 'Christophstraße', zone: 'christophstrasse' };
       if (position.x > 8 && position.x < 18 && position.z > 51 && position.z < 86) return { name: 'Simeonstraße', zone: 'simeonstrasse' };
       if (position.x > -21 && position.x < 9 && position.z > 57) return { name: 'Porta Nigra', zone: 'porta' };
