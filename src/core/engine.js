@@ -355,7 +355,7 @@ export class GameEngine {
       return;
     }
     this.location = this.world.getLocation(this.player.position);
-    const streetZone = ['porta', 'simeonstrasse', 'brotstrasse', 'fleischstrasse', 'christophstrasse'].includes(this.location.zone);
+    const streetZone = ['porta', 'simeonstrasse', 'brotstrasse', 'fleischstrasse', 'christophstrasse', 'margaretengaesschen'].includes(this.location.zone);
     const plazaZone = ['hauptmarkt', 'domfreihof', 'kornmarkt', 'hauptbahnhof'].includes(this.location.zone);
     const portraitMobile = this.isTouchDevice && window.innerHeight > window.innerWidth;
     // The player's position is the camera target in every playable area.
@@ -364,7 +364,7 @@ export class GameEngine {
     this.cameraFocus.set(this.player.position.x, 0, this.player.position.z);
     // Keep the hero visible: a classic RPG camera is high enough to read the
     // walking space, but retains enough tilt for façades and landmarks.
-    const cameraHeight = this.location.zone === 'simeonstrasse' || this.location.zone === 'brotstrasse' || this.location.zone === 'fleischstrasse' || this.location.zone === 'christophstrasse' ? 13.4 : this.location.zone === 'sternstrasse' ? 14.1 : this.location.zone === 'domfreihof' || this.location.zone === 'kornmarkt' || this.location.zone === 'hauptbahnhof' ? 17.2 : this.location.zone === 'porta' ? 14.4 : 14.8;
+    const cameraHeight = this.location.zone === 'simeonstrasse' || this.location.zone === 'brotstrasse' || this.location.zone === 'fleischstrasse' || this.location.zone === 'christophstrasse' || this.location.zone === 'margaretengaesschen' ? 13.4 : this.location.zone === 'sternstrasse' ? 14.1 : this.location.zone === 'domfreihof' || this.location.zone === 'kornmarkt' || this.location.zone === 'hauptbahnhof' ? 17.2 : this.location.zone === 'porta' ? 14.4 : 14.8;
     const desired = streetZone
       // Sitting close to the middle of a street prevents the nearest house
       // row from covering the player, while still keeping an oblique view.
