@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { animateCharacterPose, createWorld, makePerson, setPersonStyle } from '../world/world.js';
 
 const OUTFITS = {
@@ -40,10 +44,12 @@ export class GameEngine {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     // A quieter grade preserves the warm evening mood while giving the scene
     // the richer, less plastic contrast of a classic isometric RPG.
-    this.renderer.toneMappingExposure = .96;
+    this.renderer.toneMappingExposure = 1.02;
     this.renderer.shadowMap.enabled = this.qualityProfile !== 'low';
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = true;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.pixelRatio()));
+    this.composer = this.createPostProcessing();
     this.clock = new THREE.Clock();
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
@@ -53,6 +59,7 @@ export class GameEngine {
     this.location = { name: 'Hauptmarkt', zone: 'hauptmarkt' };
     this.keys = new Set();
     this.joystick = new THREE.Vector2();
+    this.playerVelocity = new THREE.Vector3();
     this.running = true;
     this.inputEnabled = true;
     this.cinematic = null;
@@ -73,6 +80,19 @@ export class GameEngine {
     this.resize();
     this.bindInput();
     this.animate();
+  }
+
+  createPostProcessing() {
+    // Bloom is deliberately reserved for powerful desktop GPUs.  It gives
+    // lanterns, windows and the late sun a soft cinematic lift without
+    // compromising the responsive mobile profile.
+    if (this.qualityProfile !== 'high') return null;
+    const composer = new EffectComposer(this.renderer);
+    composer.addPass(new RenderPass(this.scene, this.camera));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), .19, .38, .86);
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+    return composer;
   }
 
   chooseQualityProfile() {
@@ -211,6 +231,10 @@ export class GameEngine {
     this.camera.top = viewHeight / 2;
     this.camera.bottom = -viewHeight / 2;
     this.camera.updateProjectionMatrix();
+    if (this.composer) {
+      this.composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.pixelRatio()));
+      this.composer.setSize(width, height);
+    }
   }
 
   keyboardVector() {
@@ -239,21 +263,35 @@ export class GameEngine {
     // once before applying the same screen-relative movement as the keyboard.
     const joystick = new THREE.Vector2(this.joystick.x, -this.joystick.y);
     const input = keyboard.lengthSq() > 0 ? keyboard : joystick;
-    let movement = new THREE.Vector3();
+    let targetVelocity = new THREE.Vector3();
     if (this.inputEnabled && input.lengthSq() > .005) {
-      movement = this.cameraRelativeMovement(input, 4.8 * delta);
+      targetVelocity = this.cameraRelativeMovement(input, 4.8);
     } else if (this.inputEnabled && this.destination) {
       const distance = this.destination.clone().sub(this.player.position);
       distance.y = 0;
       if (distance.length() < .1) this.destination = null;
-      else movement = distance.normalize().multiplyScalar(Math.min(4.8 * delta, distance.length()));
+      else targetVelocity = distance.normalize().multiplyScalar(Math.min(4.8, Math.max(.7, distance.length() * 4.4)));
     }
+    const responsiveness = targetVelocity.lengthSq() > 0 ? 13 : 10;
+    this.playerVelocity.lerp(targetVelocity, 1 - Math.exp(-delta * responsiveness));
+    if (!this.inputEnabled) this.playerVelocity.multiplyScalar(Math.exp(-delta * 14));
+    if (this.playerVelocity.lengthSq() < .00006) this.playerVelocity.set(0, 0, 0);
+    const movement = this.playerVelocity.clone().multiplyScalar(delta);
     if (movement.lengthSq() > 0) {
-      this.player.position.add(movement);
-      this.world.clampPosition(this.player.position);
-      this.player.rotation.y = Math.atan2(movement.x, movement.z);
-      this.callbacks.onMove?.(this.getPosition());
-      this.player.position.y = Math.abs(Math.sin(time * 8)) * .026;
+      const before = this.player.position.clone();
+      const resolved = this.world.moveWithCollisions(before, movement, .34);
+      resolved.y = this.player.position.y;
+      this.player.position.copy(resolved);
+      const actual = resolved.clone().sub(before);
+      actual.y = 0;
+      if (actual.lengthSq() < movement.lengthSq() * .14) this.playerVelocity.multiplyScalar(.3);
+      if (actual.lengthSq() > .000002) {
+        const desiredRotation = Math.atan2(actual.x, actual.z);
+        const rotationDelta = Math.atan2(Math.sin(desiredRotation - this.player.rotation.y), Math.cos(desiredRotation - this.player.rotation.y));
+        this.player.rotation.y += rotationDelta * (1 - Math.exp(-delta * 15));
+        this.callbacks.onMove?.(this.getPosition());
+      }
+      this.player.position.y = Math.abs(Math.sin(time * 8.2)) * Math.min(.03, actual.length() * .12 + .012);
     } else {
       this.player.position.y = Math.sin(time * 1.75) * .008;
     }
@@ -325,8 +363,10 @@ export class GameEngine {
       // row from covering the player, while still keeping an oblique view.
       ? new THREE.Vector3(this.cameraFocus.x + 3.6, cameraHeight, this.cameraFocus.z - 19.8)
       : new THREE.Vector3(this.cameraFocus.x + 10.8, cameraHeight, this.cameraFocus.z + 17.4);
-    this.camera.position.lerp(desired, 1 - Math.exp(-delta * (portraitMobile ? 4.6 : 2.35)));
+    const safeDesired = this.world.getSafeCameraPosition(desired);
+    this.camera.position.lerp(safeDesired, 1 - Math.exp(-delta * (portraitMobile ? 4.6 : 2.35)));
     this.camera.lookAt(this.cameraFocus.x, .3, this.cameraFocus.z);
+    this.world.updateCameraOcclusion(this.camera, this.player.position, delta);
     // A gentle, automatic widening at the three plazas lets their landmarks
     // breathe. The player's wheel zoom remains an offset, so it is never
     // overridden while they explore.
@@ -348,7 +388,8 @@ export class GameEngine {
     this.updateCamera(delta);
     this.world.update(time, this.player.position);
     this.callbacks.onFrame?.({ time, position: this.getPosition(), visitorCount: this.world.visitorCount, location: this.location });
-    this.renderer.render(this.scene, this.camera);
+    if (this.composer) this.composer.render();
+    else this.renderer.render(this.scene, this.camera);
   }
 
   destroy() {
@@ -359,6 +400,7 @@ export class GameEngine {
     window.removeEventListener('keyup', this.onKeyUp);
     this.canvas.removeEventListener('pointerdown', this.onPointerDown);
     this.canvas.removeEventListener('wheel', this.onWheel);
+    this.composer?.dispose();
     this.renderer.dispose();
   }
 }
