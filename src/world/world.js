@@ -1479,6 +1479,125 @@ function addChristophstrasse(parent) {
   return street;
 }
 
+function addHauptbahnhof(parent, x, z, quality) {
+  const station = new THREE.Group();
+  station.name = 'Hauptbahnhof Trier';
+  station.position.set(x, 0, z);
+  // The façade faces east towards the station square and the arriving street.
+  station.rotation.y = -Math.PI / 2;
+  const sandstone = 0xd5bc94;
+  const trim = 0xe6d2ac;
+  const slate = 0x5f696a;
+  const front = -3.58;
+
+  addBox(station, { w: 24.0, h: 7.0, d: 7.0, color: sandstone, map: getStuccoTexture(), roughness: .7, bevel: .08 });
+  addBox(station, { y: 6.9, w: 24.7, h: .34, d: 7.5, color: trim, roughness: .58, bevel: .03 });
+  addBox(station, { y: 7.22, w: 25.1, h: .22, d: 7.8, color: slate, metalness: .16, roughness: .58, bevel: .03 });
+  for (const wing of [-9.0, 9.0]) {
+    addBox(station, { x: wing, y: 7.1, w: 5.2, h: .75, d: 7.35, color: slate, roughness: .68, bevel: .05 });
+  }
+  for (const column of [-10.3, -7.1, -3.9, 3.9, 7.1, 10.3]) {
+    addBox(station, { x: column, y: .12, z: front - .09, w: .28, h: 4.65, d: .28, color: trim, roughness: .58, bevel: .025 });
+  }
+  for (const column of [-8.7, -5.5, -2.3, 2.3, 5.5, 8.7]) {
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.82, 2.05, .075), material(0x29444d, { metalness: .22, roughness: .2, emissive: 0x193a42, emissiveIntensity: .46 }));
+    glass.position.set(column, 4.32, front - .05);
+    station.add(glass);
+    addBox(station, { x: column, y: 3.2, z: front - .09, w: 2.06, h: .12, d: .12, color: trim, roughness: .52, bevel: .02 });
+  }
+  for (const entry of [-2.1, 2.1]) {
+    const doorway = new THREE.Mesh(new THREE.BoxGeometry(2.55, 3.12, .11), material(0x20363b, { metalness: .22, roughness: .24, emissive: 0x1c3a3d, emissiveIntensity: .48 }));
+    doorway.position.set(entry, 1.55, front - .08);
+    station.add(doorway);
+    addBox(station, { x: entry, y: 3.1, z: front - .14, w: 2.88, h: .18, d: .28, color: trim, roughness: .5, bevel: .025 });
+  }
+  const canopy = addBox(station, { y: 3.52, z: front - .63, w: 7.35, h: .18, d: 1.36, color: 0x354b4e, metalness: .35, roughness: .36, bevel: .03 });
+  canopy.rotation.x = -.05;
+  for (const postX of [-3.1, 3.1]) addCylinder(station, { x: postX, z: front - 1.18, rTop: .06, rBottom: .07, h: 3.3, sides: 8, color: 0x334346, metalness: .42, roughness: .4 });
+  const clock = new THREE.Mesh(new THREE.CircleGeometry(.78, 24), material(0xf0e4c9, { roughness: .48 }));
+  clock.position.set(0, 5.57, front - .1);
+  clock.rotation.y = Math.PI;
+  station.add(clock);
+  const clockHand = new THREE.Mesh(new THREE.BoxGeometry(.055, .53, .035), material(0x384143, { metalness: .35 }));
+  clockHand.position.set(0, 5.72, front - .14);
+  clockHand.rotation.z = -.52;
+  station.add(clockHand);
+  const minuteHand = new THREE.Mesh(new THREE.BoxGeometry(.045, .38, .035), material(0x384143, { metalness: .35 }));
+  minuteHand.position.set(.14, 5.55, front - .15);
+  minuteHand.rotation.z = Math.PI / 2;
+  station.add(minuteHand);
+  addLabel(station, 'TRIER HAUPTBAHNHOF', 0, 6.65, front - .18, 1.02, '#f1ce7e');
+  if (quality !== 'low') {
+    const glow = new THREE.PointLight(0xffbd70, .9, 18, 2);
+    glow.position.set(0, 4.1, front - 2.4);
+    station.add(glow);
+  }
+  parent.add(station);
+  return markSolid(station, { type: 'box', width: 24.2, depth: 7.3, height: 8.0, padding: .12 }, { cameraFade: true });
+}
+
+function addWestChristophstrasseToStation(parent, quality) {
+  const district = new THREE.Group();
+  district.name = 'Christophstraße – Porta Nigra zum Hauptbahnhof';
+
+  // The new long Christophstraße deliberately grows from the opposite side of
+  // the Porta. It keeps the previously built eastern branch intact while
+  // giving the western side the proper city-scale connection requested here.
+  const connector = new THREE.Mesh(new THREE.PlaneGeometry(8.0, 15.2), pavingMaterial(8.0, 15.2, 0xd1b38b, 441));
+  connector.rotation.set(-Math.PI / 2, -.74, 0);
+  connector.position.set(-19.25, -.016, 86.35);
+  district.add(connector);
+  const street = new THREE.Mesh(new THREE.PlaneGeometry(44.5, 8.55), pavingMaterial(44.5, 8.55, 0xd4b88e, 442));
+  street.rotation.x = -Math.PI / 2;
+  street.position.set(-41.6, -.016, 90.0);
+  district.add(street);
+  for (const z of [86.15, 93.85]) {
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(43.8, 1.02), pavingMaterial(43.8, 1.02, 0xa79e90, 443 + (z > 90 ? 1 : 0), .91));
+    sidewalk.rotation.x = -Math.PI / 2;
+    sidewalk.position.set(-41.6, -.01, z);
+    district.add(sidewalk);
+  }
+  for (const z of [85.53, 94.47]) addBox(district, { x: -41.6, y: -.01, z, w: 43.7, h: .04, d: .065, color: 0x756d62, roughness: .78, bevel: .008 });
+
+  const southFrontage = [[-25.1, 81.9, 4.95, 4.6, 451, 'CAFÉ'], [-30.7, 81.9, 5.2, 4.95, 452, 'KIOSK'], [-36.6, 81.9, 4.8, 4.45, 453, 'BÄCKEREI'], [-42.0, 81.9, 5.0, 4.8, 454, 'BUCH'], [-47.7, 81.9, 5.15, 4.55, 455, null], [-53.4, 81.9, 4.85, 4.9, 456, 'TRIER']];
+  const northFrontage = [[-25.0, 98.1, 5.0, 4.75, 461, 'APOTHEKE'], [-30.7, 98.1, 4.9, 4.45, 462, 'BLUMEN'], [-36.2, 98.1, 5.15, 4.95, 463, null], [-42.0, 98.1, 5.0, 4.55, 464, 'REISE'], [-47.6, 98.1, 4.85, 4.8, 465, 'EIS'], [-53.1, 98.1, 4.9, 4.45, 466, null]];
+  southFrontage.forEach(([x, z, w, h, seed, sign]) => createTownhouse(district, { x, z, w, h, d: 4.55, facade: choose([0xd3a27e, 0xe0cdb2, 0xc47c67, 0xd5b18b], seed), roof: choose(PALETTE.roof, seed + 2), seed, sign, rotation: Math.PI }));
+  northFrontage.forEach(([x, z, w, h, seed, sign]) => createTownhouse(district, { x, z, w, h, d: 4.55, facade: choose([0xd9cbb8, 0xc89170, 0xe2d5c2, 0xc58068], seed), roof: choose(PALETTE.roof, seed + 3), seed, sign }));
+  [[-23.0, 86.0], [-29.2, 94.0], [-35.6, 86.0], [-42.3, 94.0], [-49.1, 86.0], [-56.3, 93.9]].forEach(([x, z], index) => {
+    addPlanter(district, x, z, index % 2 ? Math.PI / 2 : 0, choose(PALETTE.flower, 830 + index));
+    addLamp(district, x + (index % 2 ? .42 : -.42), z + (index % 2 ? -.42 : .42), quality !== 'low' && index < 4);
+  });
+  addSimeonCafeTables(district, -27.5, 86.55, 3);
+  addSimeonCafeTables(district, -44.5, 93.25, 2);
+  addBicycle(district, -34.5, 86.2, .1);
+  addBikeRack(district, -48.6, 94.0, Math.PI / 2);
+  addStreetSign(district, -24.0, 88.2, 'CHRISTOPHSTRASSE', -Math.PI / 2);
+
+  // The street releases into a dedicated station square. Its broad paving and
+  // clear gap in front of the façade make the Hauptbahnhof a destination, not
+  // merely another façade at the end of a corridor.
+  const stationSquare = new THREE.Mesh(new THREE.PlaneGeometry(22.5, 25.5), pavingMaterial(22.5, 25.5, 0xd8bd93, 475));
+  stationSquare.rotation.x = -Math.PI / 2;
+  stationSquare.position.set(-69.2, -.019, 90.0);
+  district.add(stationSquare);
+  const arrivalPath = new THREE.Mesh(new THREE.PlaneGeometry(13.2, 7.0), pavingMaterial(13.2, 7.0, 0xdcc7a6, 476, .9));
+  arrivalPath.rotation.x = -Math.PI / 2;
+  arrivalPath.position.set(-76.0, -.012, 90.0);
+  district.add(arrivalPath);
+  [[-63.3, 81.7, .86, 481], [-63.3, 98.4, .86, 482], [-71.8, 79.5, .72, 483], [-71.8, 100.4, .72, 484]].forEach(([x, z, scale, seed]) => addTree(district, x, z, scale, seed));
+  [[-62.4, 85.0, 0], [-62.4, 95.0, Math.PI], [-73.0, 82.0, 0], [-73.0, 98.0, Math.PI]].forEach(([x, z, rotation]) => addBench(district, x, z, rotation));
+  [[-64.8, 82.8], [-64.8, 97.1], [-74.0, 84.6], [-74.0, 95.4]].forEach(([x, z], index) => addPlanter(district, x, z, index % 2 ? Math.PI / 2 : 0, choose(PALETTE.flower, 850 + index)));
+  [[-60.0, 84.0], [-60.0, 96.0], [-74.2, 82.6], [-74.2, 97.4]].forEach(([x, z], index) => addLamp(district, x, z, quality !== 'low' && index < 2));
+  addBicycle(district, -65.6, 85.8, .2);
+  addBikeRack(district, -66.0, 84.5, Math.PI / 2);
+  addModernBus(district, -67.4, 101.4);
+  addStreetBin(district, -61.8, 89.0, .1);
+  addStreetSign(district, -60.2, 90.0, 'HAUPTBAHNHOF', -Math.PI / 2);
+  addHauptbahnhof(district, -83.0, 90.0, quality);
+  parent.add(district);
+  return district;
+}
+
 function addSimeonstrasse(parent, quality) {
   const street = new THREE.Group();
   street.name = 'Simeonstraße – Porta Nigra zum Hauptmarkt';
@@ -1520,6 +1639,7 @@ function addSimeonstrasse(parent, quality) {
   addPortaForecourt(street, quality);
   addPortaSimeonEdge(street, quality);
   addChristophstrasse(street);
+  addWestChristophstrasseToStation(street, quality);
   // The larger civic forecourt leaves a full visual breath before the Roman
   // gate. Its offset keeps the monument dominant while opening the east edge
   // for the actual Simeonstraße / Christophstraße junction.
@@ -2515,6 +2635,13 @@ export function createWorld(scene, quality = 'medium') {
     [-7.2, 68.2, 'child'], [-5.9, 69.0, 'child'], [-2.7, 67.9, 'feed'], [10.8, 66.6, 'walk'],
     [12.5, 61.8, 'walk'], [14.7, 65.9, 'shop'], [12.5, 75.3, 'talk'], [15.2, 78.8, 'tourist'],
     [25.3, 69.2, 'photo'], [38.9, 59.4, 'phone'], [41.0, 67.6, 'bike'], [38.8, 52.7, 'walk'],
+    // Christophstraße on the west side now leads through a longer shopping
+    // stretch to the station. The people thin out slightly in the terminal
+    // square, leaving the station façade readable from the street.
+    [-23.4, 88.0, 'walk'], [-27.8, 92.0, 'shop'], [-32.5, 87.5, 'talk'], [-38.4, 92.0, 'bike'],
+    [-44.0, 87.6, 'photo'], [-49.4, 92.2, 'tourist'], [-54.8, 88.4, 'walk'],
+    [-61.2, 87.2, 'tourist'], [-63.8, 93.8, 'photo'], [-68.0, 90.7, 'walk'], [-71.4, 87.3, 'sit'],
+    [-74.5, 94.0, 'phone'], [-77.2, 90.3, 'tourist'], [-79.0, 86.5, 'talk'],
   ];
   const activePlacement = quality === 'low'
     ? placement.filter((_, index) => index % 2 === 0)
@@ -2532,6 +2659,7 @@ export function createWorld(scene, quality = 'medium') {
       [new THREE.Vector3(12, 0, -49), new THREE.Vector3(12, 0, -59), new THREE.Vector3(0, 0, -68), new THREE.Vector3(-12, 0, -59), new THREE.Vector3(-12, 0, -49)],
       [new THREE.Vector3(-5.4, 0, 58.8), new THREE.Vector3(2.0, 0, 60.4), new THREE.Vector3(12.5, 0, 62.0), new THREE.Vector3(12.5, 0, 69.2), new THREE.Vector3(23.0, 0, 69.2), new THREE.Vector3(38.9, 0, 69.2), new THREE.Vector3(39.0, 0, 61.0)],
       [new THREE.Vector3(-6.0, 0, 61.0), new THREE.Vector3(-4.1, 0, 69.8), new THREE.Vector3(-4.1, 0, 78.6), new THREE.Vector3(-4.1, 0, 86.0)],
+      [new THREE.Vector3(-18.0, 0, 84.2), new THREE.Vector3(-25.0, 0, 90.0), new THREE.Vector3(-39.0, 0, 90.0), new THREE.Vector3(-55.0, 0, 90.0), new THREE.Vector3(-68.5, 0, 90.0), new THREE.Vector3(-76.0, 0, 90.0)],
     ];
     const citizen = createCitizen(index, {
       mode,
@@ -2563,6 +2691,7 @@ export function createWorld(scene, quality = 'medium') {
   pigeons.push(...createPigeons(root, -6.6, -1.65));
   pigeons.push(...createPigeons(root, 1.7, -66.8));
   pigeons.push(...createPigeons(root, -4.7, 69.5));
+  pigeons.push(...createPigeons(root, -68.5, 91.0));
   const flyingBirds = createFlyingBirds(root);
   // These five people are the only authored quest figures. They use the same
   // shared character system as the crowd, so adding the story costs no new
@@ -2573,7 +2702,7 @@ export function createWorld(scene, quality = 'medium') {
 
   const warmSky = new THREE.Color(0xc79061);
   scene.background = warmSky;
-  scene.fog = new THREE.Fog(0xc79061, 46, 104);
+  scene.fog = new THREE.Fog(0xc79061, 46, 142);
   scene.add(new THREE.HemisphereLight(0xf7d7ad, 0x455d52, 1.62));
   scene.add(new THREE.AmbientLight(0xffd1a0, .36));
   const sun = new THREE.DirectionalLight(0xffb064, 3.22);
@@ -2581,9 +2710,9 @@ export function createWorld(scene, quality = 'medium') {
   sun.castShadow = true;
   const shadowSize = quality === 'high' ? 2048 : quality === 'medium' ? 1024 : 512;
   sun.shadow.mapSize.set(shadowSize, shadowSize);
-  sun.shadow.camera.left = -80;
+  sun.shadow.camera.left = -104;
   sun.shadow.camera.right = 70;
-  sun.shadow.camera.top = 58;
+  sun.shadow.camera.top = 76;
   sun.shadow.camera.bottom = -90;
   sun.shadow.bias = -.00025;
   scene.add(sun);
@@ -2888,11 +3017,13 @@ export function createWorld(scene, quality = 'medium') {
     getSafeCameraPosition,
     updateCameraOcclusion,
     clampPosition(position) {
-      position.x = THREE.MathUtils.clamp(position.x, -73, 64);
-      position.z = THREE.MathUtils.clamp(position.z, -76, 102);
+      position.x = THREE.MathUtils.clamp(position.x, -96, 64);
+      position.z = THREE.MathUtils.clamp(position.z, -76, 106);
       return position;
     },
     getLocation(position) {
+      if (position.x < -58 && position.x > -96 && position.z > 76 && position.z < 105) return { name: 'Hauptbahnhof Trier', zone: 'hauptbahnhof' };
+      if (position.x < -16 && position.x > -62 && position.z > 80 && position.z < 100) return { name: 'Christophstraße', zone: 'christophstrasse' };
       if (position.x > 15 && position.x < 50 && position.z > 64 && position.z < 77) return { name: 'Christophstraße', zone: 'christophstrasse' };
       if (position.x > 8 && position.x < 18 && position.z > 51 && position.z < 86) return { name: 'Simeonstraße', zone: 'simeonstrasse' };
       if (position.x > -21 && position.x < 9 && position.z > 57) return { name: 'Porta Nigra', zone: 'porta' };
