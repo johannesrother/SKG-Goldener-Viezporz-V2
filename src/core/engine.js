@@ -101,13 +101,20 @@ export class GameEngine {
     // landscape where the viewport can be wider than a tablet.
     if (this.isTouchDevice) return window.innerWidth < 900 ? 'low' : 'medium';
     if (window.innerWidth < 560 || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)) return 'low';
-    return window.devicePixelRatio > 1.5 && (navigator.hardwareConcurrency || 4) >= 8 ? 'high' : 'medium';
+    // The city is intentionally dense. Reserve the post-processing profile
+    // for genuinely powerful wide-screen desktops; most laptops now use the
+    // smoother medium profile instead of spending their frame budget on bloom.
+    return window.innerWidth >= 1180
+      && window.devicePixelRatio <= 2
+      && (navigator.hardwareConcurrency || 4) >= 12
+      ? 'high'
+      : 'medium';
   }
 
   pixelRatio() {
     // The isometric view still reads crisply at these caps, while the lower
     // fill rate keeps the busy square responsive on notebooks and phones.
-    return this.qualityProfile === 'high' ? 1.45 : this.qualityProfile === 'medium' ? (this.isTouchDevice ? 1 : 1.2) : .9;
+    return this.qualityProfile === 'high' ? 1.28 : this.qualityProfile === 'medium' ? (this.isTouchDevice ? .9 : 1.05) : .82;
   }
 
   getPosition() {
