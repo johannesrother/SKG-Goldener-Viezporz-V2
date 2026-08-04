@@ -2,8 +2,6 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import cobblestoneUrl from '../assets/hauptmarkt-cobblestone.png';
 import slateRoofUrl from '../assets/trier-slate-roof.png';
-import stuccoUrl from '../assets/trier-stucco-handpainted-v2.png';
-import fabricUrl from '../assets/trier-character-fabric-handpainted-v1.png';
 
 const PALETTE = {
   sandstone: [0xd6b27f, 0xc99165, 0xe0c599, 0xb98762, 0xd3a876],
@@ -258,7 +256,28 @@ function getRoofTexture() {
 
 function getStuccoTexture() {
   if (stuccoTexture) return stuccoTexture;
-  stuccoTexture = new THREE.TextureLoader().load(stuccoUrl);
+  // A lightweight painted plaster grain: it is generated once, avoids a
+  // repeated photographic tile, and still gives every warm façade a little
+  // handmade material variation on mobile as well as desktop.
+  const canvas = document.createElement('canvas');
+  canvas.width = 384;
+  canvas.height = 384;
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#ead2ac';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  for (let index = 0; index < 2300; index += 1) {
+    const seed = index * 7.31;
+    const tone = 153 + Math.floor(hash(seed) * 62);
+    const alpha = .025 + hash(seed + 3) * .07;
+    context.fillStyle = `rgba(${tone + 18}, ${tone}, ${Math.max(80, tone - 24)}, ${alpha})`;
+    const size = .6 + hash(seed + 5) * 2.2;
+    context.fillRect(hash(seed + 8) * canvas.width, hash(seed + 11) * canvas.height, size, size);
+  }
+  for (let wash = 0; wash < 30; wash += 1) {
+    context.fillStyle = `rgba(114, 80, 55, ${.01 + hash(wash + 53) * .025})`;
+    context.fillRect(0, hash(wash + 31) * canvas.height, canvas.width, 2 + hash(wash + 61) * 9);
+  }
+  stuccoTexture = new THREE.CanvasTexture(canvas);
   stuccoTexture.colorSpace = THREE.SRGBColorSpace;
   stuccoTexture.wrapS = THREE.RepeatWrapping;
   stuccoTexture.wrapT = THREE.RepeatWrapping;
@@ -271,7 +290,30 @@ function getStuccoTexture() {
 
 function getFabricTexture() {
   if (fabricTexture) return fabricTexture;
-  fabricTexture = new THREE.TextureLoader().load(fabricUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = 192;
+  canvas.height = 192;
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#a8a09a';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.globalAlpha = .17;
+  context.strokeStyle = '#736d68';
+  context.lineWidth = 1;
+  for (let stripe = -192; stripe < 384; stripe += 8) {
+    context.beginPath();
+    context.moveTo(stripe, 0);
+    context.lineTo(stripe - 192, 192);
+    context.stroke();
+  }
+  context.strokeStyle = '#f2e4d5';
+  for (let stripe = 0; stripe < 384; stripe += 11) {
+    context.beginPath();
+    context.moveTo(stripe, 0);
+    context.lineTo(stripe - 192, 192);
+    context.stroke();
+  }
+  context.globalAlpha = 1;
+  fabricTexture = new THREE.CanvasTexture(canvas);
   fabricTexture.colorSpace = THREE.SRGBColorSpace;
   fabricTexture.wrapS = THREE.RepeatWrapping;
   fabricTexture.wrapT = THREE.RepeatWrapping;
