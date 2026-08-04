@@ -1,6 +1,9 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import cobblestoneUrl from '../assets/hauptmarkt-cobblestone.png';
 import slateRoofUrl from '../assets/trier-slate-roof.png';
+import stuccoUrl from '../assets/trier-stucco-handpainted-v2.png';
+import fabricUrl from '../assets/trier-character-fabric-handpainted-v1.png';
 
 const PALETTE = {
   sandstone: [0xd6b27f, 0xc99165, 0xe0c599, 0xb98762, 0xd3a876],
@@ -38,10 +41,33 @@ const shared = {
 let roofTexture;
 let cobblestoneTexture;
 let romanStoneTexture;
+let stuccoTexture;
+let fabricTexture;
 const characterMaterialCache = new Map();
+const boxGeometryCache = new Map();
+
+function roundedBoxGeometry(w, h, d, bevel = 0) {
+  // Most façade parts reuse only a handful of dimensions.  Sharing their
+  // geometry keeps the visual bevel without multiplying GPU allocations.
+  const rounded = bevel > .008 && Math.min(w, h, d) > .12;
+  const key = `${rounded ? 'r' : 'b'}:${w.toFixed(3)}:${h.toFixed(3)}:${d.toFixed(3)}:${bevel.toFixed(3)}`;
+  const cached = boxGeometryCache.get(key);
+  if (cached) return cached;
+  const geometry = rounded
+    ? new RoundedBoxGeometry(w, h, d, 2, Math.min(bevel, Math.min(w, h, d) * .18))
+    : new THREE.BoxGeometry(w, h, d);
+  boxGeometryCache.set(key, geometry);
+  return geometry;
+}
 
 function material(color, options = {}) {
-  return new THREE.MeshStandardMaterial({ color, roughness: 0.76, metalness: 0.02, ...options });
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.76,
+    metalness: 0.02,
+    envMapIntensity: .42,
+    ...options,
+  });
 }
 
 // These materials are deliberately shared by every citizen. The colour tint
@@ -58,7 +84,12 @@ function characterMaterial(color, kind = 'fabric') {
       : kind === 'skin'
         ? { roughness: .72, metalness: 0 }
         : { roughness: .72, metalness: 0 };
-  const result = new THREE.MeshStandardMaterial({ color, ...options });
+  const result = new THREE.MeshStandardMaterial({
+    color,
+    map: kind === 'fabric' || kind === 'denim' ? getFabricTexture() : null,
+    envMapIntensity: .24,
+    ...options,
+  });
   characterMaterialCache.set(key, result);
   return result;
 }
@@ -79,8 +110,9 @@ function choose(values, seed) {
   return values[Math.floor(hash(seed) * values.length) % values.length];
 }
 
-function addBox(parent, { x = 0, y = 0, z = 0, w = 1, h = 1, d = 1, color = 0xffffff, ...options }) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material(color, options));
+function addBox(parent, { x = 0, y = 0, z = 0, w = 1, h = 1, d = 1, color = 0xffffff, bevel, ...options }) {
+  const defaultBevel = Math.min(.075, Math.max(.012, Math.min(w, h, d) * .075));
+  const mesh = new THREE.Mesh(roundedBoxGeometry(w, h, d, bevel ?? defaultBevel), material(color, options));
   mesh.position.set(x, y + h / 2, z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -95,6 +127,16 @@ function addCylinder(parent, { x = 0, y = 0, z = 0, rTop = 0.5, rBottom = rTop, 
   mesh.receiveShadow = true;
   parent.add(mesh);
   return mesh;
+}
+
+// Collision shapes live on authored root groups rather than on every visual
+// child mesh.  That keeps collisions predictable and affordable while still
+// making buildings, props and people feel solid to the player.
+function markSolid(group, shape, { cameraFade = false } = {}) {
+  const shapes = Array.isArray(shape) ? shape : [shape];
+  group.userData.collisionShapes = shapes;
+  group.userData.cameraFade = cameraFade;
+  return group;
 }
 
 function addLabel(parent, text, x, y, z, scale = 1, accent = '#f0c56f') {
@@ -212,6 +254,30 @@ function getRoofTexture() {
   roofTexture.repeat.set(2.3, 2.3);
   roofTexture.anisotropy = 6;
   return roofTexture;
+}
+
+function getStuccoTexture() {
+  if (stuccoTexture) return stuccoTexture;
+  stuccoTexture = new THREE.TextureLoader().load(stuccoUrl);
+  stuccoTexture.colorSpace = THREE.SRGBColorSpace;
+  stuccoTexture.wrapS = THREE.RepeatWrapping;
+  stuccoTexture.wrapT = THREE.RepeatWrapping;
+  // The hand-painted source is intentionally stretched across an entire
+  // facade rather than tiled into an obvious wallpaper pattern.
+  stuccoTexture.repeat.set(.92, 1.18);
+  stuccoTexture.anisotropy = 6;
+  return stuccoTexture;
+}
+
+function getFabricTexture() {
+  if (fabricTexture) return fabricTexture;
+  fabricTexture = new THREE.TextureLoader().load(fabricUrl);
+  fabricTexture.colorSpace = THREE.SRGBColorSpace;
+  fabricTexture.wrapS = THREE.RepeatWrapping;
+  fabricTexture.wrapT = THREE.RepeatWrapping;
+  fabricTexture.repeat.set(1.75, 1.75);
+  fabricTexture.anisotropy = 4;
+  return fabricTexture;
 }
 
 function getRomanStoneTexture() {
@@ -336,7 +402,7 @@ function addPlanter(parent, x, z, rotation = 0, flowers = 0xd67175) {
   planter.add(foliage);
   planter.userData.wind = { target: foliage, phase: x * .57 + z * .21, sway: .026 };
   parent.add(planter);
-  return planter;
+  return markSolid(planter, { type: 'box', width: .95, depth: .42, height: .62, padding: .08 });
 }
 
 function addWindowBox(parent, { x, y, z, side, flowers, seed }) {
@@ -418,7 +484,7 @@ function createTownhouse(parent, spec) {
   const building = new THREE.Group();
   building.position.set(x, 0, z);
   building.rotation.y = rotation;
-  addBox(building, { w, h, d, color: facade, roughness: .78 });
+  addBox(building, { w, h, d, color: facade, map: getStuccoTexture(), roughness: .79, bevel: .065 });
   const stories = h > 4 ? 3 : 2;
   const facadeTrim = hash(seed + 33) > .5 ? 0xd6b894 : 0xb98c72;
   // Fine floor bands and edge pilasters wrap the building, so the elevations
@@ -534,7 +600,7 @@ function createTownhouse(parent, spec) {
   }
   if (sign) addLabel(building, sign, 0, 1.72, front - .13, Math.min(1.05, w * .22));
   parent.add(building);
-  return building;
+  return markSolid(building, { type: 'box', width: w, depth: d, height: h + roofHeightFor(w, d), padding: .06 });
 }
 
 // The next three landmarks are deliberately modelled from the distinctive rhythm of
@@ -573,7 +639,7 @@ function createGabledHouse(parent, spec) {
   const house = new THREE.Group();
   house.position.set(x, 0, z);
   house.rotation.y = rotation;
-  addBox(house, { w, h, d, color: facade, roughness: .71 });
+  addBox(house, { w, h, d, color: facade, map: getStuccoTexture(), roughness: .74, bevel: .065 });
   const front = -d / 2 - .035;
   // Narrow pilasters and floor bands give the stylised facades a real, built
   // rhythm instead of a single flat coloured block.
@@ -629,7 +695,7 @@ function createGabledHouse(parent, spec) {
   }
   if (sign) addLabel(house, sign, 0, 1.72, front - .14, Math.min(1.02, w * .22));
   parent.add(house);
-  return house;
+  return markSolid(house, { type: 'box', width: w, depth: d, height: h + roofHeightFor(w, d), padding: .06 });
 }
 
 function addSteipe(parent, x, z) {
@@ -666,7 +732,7 @@ function addSteipe(parent, x, z) {
   }
   addLabel(steipe, 'STEIPE', 0, 1.68, front - .2, .86, '#f0c56f');
   parent.add(steipe);
-  return steipe;
+  return markSolid(steipe, { type: 'box', width: 6.45, depth: 4.15, height: 6.8, padding: .1 });
 }
 
 function addGangolfTower(parent, x, z) {
@@ -692,7 +758,7 @@ function addGangolfTower(parent, x, z) {
   crossBar.position.set(0, 13.28, 0);
   tower.add(crossBar);
   parent.add(tower);
-  return tower;
+  return markSolid(tower, { type: 'circle', radius: 1.5, height: 13.8, padding: .1 });
 }
 
 function addTree(parent, x, z, scale = 1, seed = 1) {
@@ -713,7 +779,7 @@ function addTree(parent, x, z, scale = 1, seed = 1) {
   tree.add(lod);
   tree.userData.wind = { target: lod, phase: seed * .67, sway: .018 + hash(seed + 9) * .018 };
   parent.add(tree);
-  return tree;
+  return markSolid(tree, { type: 'circle', radius: .18 + scale * .13, height: 1.6 * scale, padding: .08 });
 }
 
 function addLamp(parent, x, z, glow = true) {
@@ -732,7 +798,7 @@ function addLamp(parent, x, z, glow = true) {
     lamp.add(point);
   }
   parent.add(lamp);
-  return lamp;
+  return markSolid(lamp, { type: 'circle', radius: .12, height: 3.1, padding: .06 });
 }
 
 function addBench(parent, x, z, rotation = 0) {
@@ -743,7 +809,7 @@ function addBench(parent, x, z, rotation = 0) {
   addBox(bench, { z: -.13, y: .39, w: 1.45, h: .085, d: .085, color: 0x744b2b });
   for (const legX of [-.51, .51]) addBox(bench, { x: legX, z: .08, w: .075, h: .43, d: .09, color: 0x252d30 });
   parent.add(bench);
-  return bench;
+  return markSolid(bench, { type: 'box', width: 1.52, depth: .5, height: .5, padding: .1 });
 }
 
 function addBicycle(parent, x, z, rotation = 0) {
@@ -765,6 +831,7 @@ function addBicycle(parent, x, z, rotation = 0) {
   handle.rotation.z = -.45;
   bicycle.add(handle);
   parent.add(bicycle);
+  return markSolid(bicycle, { type: 'circle', radius: .42, height: .75, padding: .08 });
 }
 
 // Small shared street props break up long stretches of paving without adding
@@ -778,7 +845,7 @@ function addStreetBin(parent, x, z, rotation = 0) {
   addCylinder(bin, { y: .58, rTop: .19, rBottom: .19, h: .07, sides: 10, color: 0x253031, metalness: .42, roughness: .34 });
   addBox(bin, { y: .38, z: -.208, w: .15, h: .11, d: .018, color: 0xc8a66a, emissive: 0x4b351b, emissiveIntensity: .15 });
   parent.add(bin);
-  return bin;
+  return markSolid(bin, { type: 'circle', radius: .22, height: .7, padding: .05 });
 }
 
 function addBikeRack(parent, x, z, rotation = 0) {
@@ -793,7 +860,7 @@ function addBikeRack(parent, x, z, rotation = 0) {
     rack.add(hoop);
   }
   parent.add(rack);
-  return rack;
+  return markSolid(rack, { type: 'box', width: 1.35, depth: .18, height: .5, padding: .08 });
 }
 
 function addPostBox(parent, x, z, rotation = 0) {
@@ -804,7 +871,7 @@ function addPostBox(parent, x, z, rotation = 0) {
   addBox(box, { y: .83, w: .38, h: .38, d: .26, color: 0x416f63, roughness: .45, metalness: .18 });
   addBox(box, { y: .89, z: -.136, w: .24, h: .055, d: .018, color: 0xf0c56c, roughness: .34 });
   parent.add(box);
-  return box;
+  return markSolid(box, { type: 'circle', radius: .22, height: 1.3, padding: .08 });
 }
 
 function addBarrelCluster(parent, x, z, seed = 0) {
@@ -822,7 +889,7 @@ function addBarrelCluster(parent, x, z, seed = 0) {
     group.add(band);
   }
   parent.add(group);
-  return group;
+  return markSolid(group, { type: 'box', width: .9, depth: .68, height: .55, padding: .08 });
 }
 
 function addMarketCrates(parent, x, z, seed = 0) {
@@ -841,7 +908,7 @@ function addMarketCrates(parent, x, z, seed = 0) {
     group.add(crate);
   }
   parent.add(group);
-  return group;
+  return markSolid(group, { type: 'box', width: .95, depth: .72, height: .62, padding: .08 });
 }
 
 function addStreetSign(parent, x, z, label, rotation = 0) {
@@ -852,7 +919,7 @@ function addStreetSign(parent, x, z, label, rotation = 0) {
   addBox(sign, { y: 1.33, w: .74, h: .25, d: .05, color: 0x31564e, roughness: .4, metalness: .18 });
   addLabel(sign, label, 0, 1.33, -.03, .26, '#f2d398');
   parent.add(sign);
-  return sign;
+  return markSolid(sign, { type: 'circle', radius: .1, height: 1.65, padding: .04 });
 }
 
 function addWindFlag(parent, x, z, color, rotation = 0, seed = 0) {
@@ -903,7 +970,7 @@ function addWineStand(parent, x, z) {
   }
   addLabel(stand, 'VIEZ · WEIN', 0, 2.2, -.76, 1.05);
   parent.add(stand);
-  return stand;
+  return markSolid(stand, { type: 'box', width: 4.05, depth: 3.55, height: 2.8, padding: .12 });
 }
 
 function addCafeTerrace(parent, x, z) {
@@ -929,7 +996,7 @@ function addCafeTerrace(parent, x, z) {
     }
   }
   parent.add(cafe);
-  return cafe;
+  return markSolid(cafe, { type: 'box', width: 5.05, depth: 5.0, height: 2.85, padding: .12 });
 }
 
 function addMarketStall(parent, x, z, title, canopyA, canopyB) {
@@ -946,7 +1013,7 @@ function addMarketStall(parent, x, z, title, canopyA, canopyB) {
   }
   addLabel(stall, title, 0, 1.74, -.72, .7);
   parent.add(stall);
-  return stall;
+  return markSolid(stall, { type: 'box', width: 2.78, depth: 1.52, height: 2.4, padding: .12 });
 }
 
 function addStreetMusicCorner(parent, x, z) {
@@ -964,6 +1031,7 @@ function addStreetMusicCorner(parent, x, z) {
   corner.add(cone);
   addLabel(corner, 'LIVE', .1, 1.65, .14, .48, '#e4b964');
   parent.add(corner);
+  return markSolid(corner, { type: 'circle', radius: .62, height: 1.3, padding: .1 });
 }
 
 function addFountain(parent) {
@@ -998,7 +1066,7 @@ function addFountain(parent) {
     fountain.add(stream);
   }
   parent.add(fountain);
-  return fountain;
+  return markSolid(fountain, { type: 'circle', radius: 2.84, height: 4.35, padding: .12 });
 }
 
 // A Romanesque, sandstone interpretation of Trier Cathedral. Its broad nave,
@@ -1064,7 +1132,7 @@ function addTrierDom(parent, x, z, quality, rotation = Math.PI) {
   }
   addLabel(dom, 'HOHER DOM ZU TRIER', 0, 3.85, front - .46, 1.16, '#efcb7d');
   parent.add(dom);
-  return dom;
+  return markSolid(dom, { type: 'box', width: 18.5, depth: 12.3, height: 19.8, padding: .15 }, { cameraFade: true });
 }
 
 function addRomanAperture(parent, { x, y, z, width, height, stone = 0x887b6d, darkness = 0x232729 }) {
@@ -1142,6 +1210,7 @@ function addSimeonCafeTables(parent, x, z, count = 3) {
     addCylinder(table, { y: .52, rTop: .35, rBottom: .35, h: .06, sides: 12, color: 0xd6ab70, roughness: .4 });
     for (const side of [-1, 1]) addBox(table, { x: side * .43, z: .06, y: .02, w: .25, h: .42, d: .26, color: 0x3d534d });
     parent.add(table);
+    markSolid(table, { type: 'circle', radius: .52, height: .64, padding: .08 });
   }
 }
 
@@ -1193,7 +1262,12 @@ function addPortaNigra(parent, x, z, quality) {
     porta.add(lateSun);
   }
   parent.add(porta);
-  return porta;
+  // The central gateway deliberately stays open: only the two Roman towers
+  // block movement, so the player can really pass through the Porta.
+  return markSolid(porta, [
+    { type: 'box', x: -5.3, z: 0, width: 5.8, depth: 5.9, height: 15.9, padding: .12 },
+    { type: 'box', x: 5.3, z: 0, width: 5.8, depth: 5.9, height: 15.9, padding: .12 },
+  ], { cameraFade: true });
 }
 
 function addModernBus(parent, x, z) {
@@ -1203,6 +1277,7 @@ function addModernBus(parent, x, z) {
   addBox(bus, { y: 1.2, z: -3.13, w: 2.2, h: .66, d: .08, color: 0x284958, metalness: .2, roughness: .28 });
   for (const side of [-1, 1]) for (const offset of [-1.65, -.55, .55, 1.65]) addCylinder(bus, { x: side * 1.15, z: offset, rTop: .34, rBottom: .34, h: .14, sides: 12, color: 0x202628 });
   parent.add(bus);
+  return markSolid(bus, { type: 'box', width: 2.55, depth: 6.25, height: 2.25, padding: .12 });
 }
 
 function addSimeonBlockFabric(parent) {
@@ -2025,6 +2100,97 @@ function createFlyingBirds(parent) {
   return birds;
 }
 
+function collisionShapeInWorld(node, shape) {
+  const nodePosition = node.getWorldPosition(new THREE.Vector3());
+  const nodeQuaternion = node.getWorldQuaternion(new THREE.Quaternion());
+  const nodeScale = node.getWorldScale(new THREE.Vector3());
+  const localOffset = new THREE.Vector3(shape.x || 0, 0, shape.z || 0).applyQuaternion(nodeQuaternion);
+  const orientation = new THREE.Euler().setFromQuaternion(nodeQuaternion, 'YXZ').y;
+  const padding = shape.padding || 0;
+  if (shape.type === 'circle') {
+    return {
+      type: 'circle', x: nodePosition.x + localOffset.x, z: nodePosition.z + localOffset.z,
+      radius: shape.radius * Math.max(nodeScale.x, nodeScale.z) + padding,
+      height: (shape.height || 1) * nodeScale.y, node,
+    };
+  }
+  return {
+    type: 'box', x: nodePosition.x + localOffset.x, z: nodePosition.z + localOffset.z,
+    halfWidth: shape.width * nodeScale.x / 2 + padding,
+    halfDepth: shape.depth * nodeScale.z / 2 + padding,
+    height: (shape.height || 1) * nodeScale.y,
+    rotation: orientation, node,
+  };
+}
+
+function pushCircleOutsideCircle(point, radius, collider) {
+  const dx = point.x - collider.x;
+  const dz = point.z - collider.z;
+  const minimum = radius + collider.radius;
+  const distanceSq = dx * dx + dz * dz;
+  if (distanceSq >= minimum * minimum) return false;
+  const distance = Math.sqrt(distanceSq);
+  const normalX = distance > .0001 ? dx / distance : 1;
+  const normalZ = distance > .0001 ? dz / distance : 0;
+  const adjustment = minimum - distance + .001;
+  point.x += normalX * adjustment;
+  point.z += normalZ * adjustment;
+  return true;
+}
+
+function pushCircleOutsideBox(point, radius, collider) {
+  const cos = Math.cos(collider.rotation || 0);
+  const sin = Math.sin(collider.rotation || 0);
+  const dx = point.x - collider.x;
+  const dz = point.z - collider.z;
+  const localX = dx * cos + dz * sin;
+  const localZ = -dx * sin + dz * cos;
+  const closestX = THREE.MathUtils.clamp(localX, -collider.halfWidth, collider.halfWidth);
+  const closestZ = THREE.MathUtils.clamp(localZ, -collider.halfDepth, collider.halfDepth);
+  let normalX = localX - closestX;
+  let normalZ = localZ - closestZ;
+  const distanceSq = normalX * normalX + normalZ * normalZ;
+  if (distanceSq >= radius * radius) return false;
+  let distance = Math.sqrt(distanceSq);
+  if (distance < .0001) {
+    // The player entered the broad phase exactly.  Use the nearest side so
+    // the result is a smooth slide along a wall instead of a random jump.
+    const toX = collider.halfWidth - Math.abs(localX);
+    const toZ = collider.halfDepth - Math.abs(localZ);
+    if (toX < toZ) {
+      normalX = localX < 0 ? -1 : 1;
+      normalZ = 0;
+      distance = -toX;
+    } else {
+      normalX = 0;
+      normalZ = localZ < 0 ? -1 : 1;
+      distance = -toZ;
+    }
+  } else {
+    normalX /= distance;
+    normalZ /= distance;
+  }
+  const adjustment = radius - distance + .001;
+  const worldX = normalX * cos - normalZ * sin;
+  const worldZ = normalX * sin + normalZ * cos;
+  point.x += worldX * adjustment;
+  point.z += worldZ * adjustment;
+  return true;
+}
+
+function pointNearSegment(point, from, to, radius) {
+  const lineX = to.x - from.x;
+  const lineZ = to.z - from.z;
+  const lengthSq = lineX * lineX + lineZ * lineZ;
+  if (lengthSq < .0001) return false;
+  const t = THREE.MathUtils.clamp(((point.x - from.x) * lineX + (point.z - from.z) * lineZ) / lengthSq, 0, 1);
+  const px = from.x + lineX * t;
+  const pz = from.z + lineZ * t;
+  const dx = point.x - px;
+  const dz = point.z - pz;
+  return { t, distanceSq: dx * dx + dz * dz, radius };
+}
+
 export function createWorld(scene, quality = 'medium') {
   const root = new THREE.Group();
   root.name = 'Hauptmarkt Trier – Golden Hour';
@@ -2244,6 +2410,119 @@ export function createWorld(scene, quality = 'medium') {
   warmBounce.position.set(-8, 7, 10);
   scene.add(warmBounce);
 
+  // Build a compact collision world from the authored root groups.  Complex
+  // visual meshes are represented by one or two coarse shapes each, which is
+  // much more reliable than raycasting thousands of façade details every frame.
+  root.updateMatrixWorld(true);
+  const staticColliders = [];
+  const cameraOccluders = [];
+  root.traverse((object) => {
+    if (!object.userData.collisionShapes) return;
+    const shapes = object.userData.collisionShapes.map((shape) => collisionShapeInWorld(object, shape));
+    staticColliders.push(...shapes);
+    if (object.userData.cameraFade) {
+      const materials = new Set();
+      object.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const source = Array.isArray(child.material) ? child.material : [child.material];
+        source.forEach((meshMaterial) => {
+          if (!meshMaterial.transparent) materials.add(meshMaterial);
+        });
+      });
+      cameraOccluders.push({ shapes, materials, fade: 0 });
+    }
+  });
+
+  function dynamicColliders(position) {
+    const people = [...citizens, ...Object.values(questFriends)];
+    const nearby = [];
+    people.forEach((person) => {
+      if (!person.visible || person.position.distanceToSquared(position) > 16) return;
+      nearby.push({ type: 'circle', x: person.position.x, z: person.position.z, radius: .28 * person.scale.x, height: 1.85, node: person });
+    });
+    return nearby;
+  }
+
+  function resolvePosition(position, radius, includePeople = true) {
+    const resolved = position.clone();
+    const colliders = includePeople ? [...staticColliders, ...dynamicColliders(position)] : staticColliders;
+    for (let pass = 0; pass < 3; pass += 1) {
+      let corrected = false;
+      colliders.forEach((collider) => {
+        corrected = (collider.type === 'circle'
+          ? pushCircleOutsideCircle(resolved, radius, collider)
+          : pushCircleOutsideBox(resolved, radius, collider)) || corrected;
+      });
+      if (!corrected) break;
+    }
+    resolved.x = THREE.MathUtils.clamp(resolved.x, -72.6, 63.6);
+    resolved.z = THREE.MathUtils.clamp(resolved.z, -75.6, 72.6);
+    return resolved;
+  }
+
+  function moveWithCollisions(start, movement, radius = .34) {
+    // Resolve X and Z independently first.  When the player meets a wall at
+    // an angle, the free component survives and naturally becomes a slide.
+    const horizontal = resolvePosition(new THREE.Vector3(start.x + movement.x, 0, start.z), radius);
+    const slid = resolvePosition(new THREE.Vector3(horizontal.x, 0, horizontal.z + movement.z), radius);
+    const direct = resolvePosition(new THREE.Vector3(start.x + movement.x, 0, start.z + movement.z), radius);
+    const slideDistance = slid.distanceToSquared(start);
+    const directDistance = direct.distanceToSquared(start);
+    return directDistance > slideDistance * 1.04 ? direct : slid;
+  }
+
+  function getSafeCameraPosition(desired) {
+    const safe = desired.clone();
+    staticColliders.forEach((collider) => {
+      if (collider.type === 'circle') {
+        const dx = safe.x - collider.x;
+        const dz = safe.z - collider.z;
+        if (dx * dx + dz * dz < collider.radius * collider.radius && safe.y < collider.height + 1.5) safe.y = Math.max(safe.y, collider.height + 2.2);
+        return;
+      }
+      const cos = Math.cos(collider.rotation || 0);
+      const sin = Math.sin(collider.rotation || 0);
+      const dx = safe.x - collider.x;
+      const dz = safe.z - collider.z;
+      const localX = dx * cos + dz * sin;
+      const localZ = -dx * sin + dz * cos;
+      if (Math.abs(localX) < collider.halfWidth && Math.abs(localZ) < collider.halfDepth && safe.y < collider.height + 1.5) {
+        safe.y = Math.max(safe.y, collider.height + 2.2);
+      }
+    });
+    return safe;
+  }
+
+  function updateCameraOcclusion(camera, playerPosition, delta) {
+    const player = { x: playerPosition.x, z: playerPosition.z };
+    const cameraPoint = { x: camera.position.x, z: camera.position.z };
+    cameraOccluders.forEach((occluder) => {
+      const hidden = occluder.shapes.some((shape) => {
+        const reach = shape.type === 'circle'
+          ? shape.radius + .65
+          : Math.hypot(shape.halfWidth, shape.halfDepth) + .6;
+        const proximity = pointNearSegment({ x: shape.x, z: shape.z }, player, cameraPoint, reach);
+        const playerDistanceSq = (shape.x - player.x) ** 2 + (shape.z - player.z) ** 2;
+        // Only the immediate foreground can hide the hero.  Fading every
+        // façade along the long isometric sightline makes a city look ghostly
+        // rather than opening a useful little viewing window.
+        return proximity
+          && proximity.t > .08 && proximity.t < .38
+          && proximity.distanceSq < reach * reach
+          && playerDistanceSq < (reach + 3.6) ** 2;
+      });
+      const target = hidden ? .48 : 1;
+      occluder.fade += (target - occluder.fade) * (1 - Math.exp(-delta * 8));
+      const opacity = THREE.MathUtils.lerp(1, .48, occluder.fade);
+      occluder.materials.forEach((meshMaterial) => {
+        meshMaterial.transparent = opacity < .995;
+        meshMaterial.opacity = opacity;
+        meshMaterial.depthWrite = opacity > .7;
+        meshMaterial.needsUpdate = true;
+      });
+    });
+  }
+
   const windActors = [];
   const windFlags = [];
   const crowdDrawDistance = quality === 'high' ? 54 : quality === 'medium' ? 42 : 32;
@@ -2256,6 +2535,7 @@ export function createWorld(scene, quality = 'medium') {
   function update(time, playerPosition = new THREE.Vector3()) {
     const delta = Math.min(Math.max(time - lastUpdateTime, 0), .05);
     lastUpdateTime = time;
+    const walkers = [];
     citizens.forEach((citizen, index) => {
       const { mode, phase, route, home } = citizen.userData;
       if (mode === 'walk') {
@@ -2267,6 +2547,7 @@ export function createWorld(scene, quality = 'medium') {
         citizen.position.lerpVectors(from, to, amount);
         citizen.rotation.y = Math.atan2(to.x - from.x, to.z - from.z);
         citizen.position.y = Math.abs(Math.sin(time * 7 + phase)) * .028;
+        walkers.push(citizen);
       } else {
         citizen.position.x = home.x + Math.sin(time * (.18 + (index % 3) * .03) + phase) * .025;
         citizen.position.z = home.z + Math.cos(time * .22 + phase) * .018;
@@ -2282,6 +2563,35 @@ export function createWorld(scene, quality = 'medium') {
       animateCharacterPose(citizen, time, mode === 'walk');
       applyCitizenActivity(citizen, time);
     });
+    // The authored route network keeps people in walkable alleys; the small
+    // steering pass below prevents the handful of moving NPCs from stacking
+    // on the same segment or walking through the player.
+    for (let first = 0; first < walkers.length; first += 1) {
+      const person = walkers[first];
+      const playerDx = person.position.x - playerPosition.x;
+      const playerDz = person.position.z - playerPosition.z;
+      const playerDistance = Math.hypot(playerDx, playerDz);
+      if (playerDistance < .7) {
+        const distance = Math.max(playerDistance, .001);
+        person.position.x += (playerDx / distance) * (.7 - playerDistance);
+        person.position.z += (playerDz / distance) * (.7 - playerDistance);
+      }
+      for (let second = first + 1; second < walkers.length; second += 1) {
+        const other = walkers[second];
+        const dx = person.position.x - other.position.x;
+        const dz = person.position.z - other.position.z;
+        const distance = Math.hypot(dx, dz);
+        if (distance >= .46) continue;
+        const normalX = distance > .001 ? dx / distance : (first % 2 ? -1 : 1);
+        const normalZ = distance > .001 ? dz / distance : 0;
+        const push = (.46 - distance) * .5;
+        person.position.x += normalX * push;
+        person.position.z += normalZ * push;
+        other.position.x -= normalX * push;
+        other.position.z -= normalZ * push;
+      }
+      person.position.copy(resolvePosition(person.position, .2, false));
+    }
     Object.values(questFriends).forEach((friend, index) => {
       const quest = friend.userData.questFriend;
       const { marker, nameplate, beacon } = quest;
@@ -2300,6 +2610,7 @@ export function createWorld(scene, quality = 'medium') {
         const moving = dx * dx + dz * dz > .018;
         if (moving) friend.rotation.y = Math.atan2(dx, dz);
         friend.position.lerp(desired, 1 - Math.exp(-delta * 4.5));
+        friend.position.copy(resolvePosition(friend.position, .24, false));
         friend.position.y = moving ? Math.abs(Math.sin(time * 7.5 + index)) * .025 : Math.sin(time * 1.55 + index) * .008;
         animateCharacterPose(friend, time, moving);
       } else {
@@ -2388,6 +2699,10 @@ export function createWorld(scene, quality = 'medium') {
       });
     },
     revealGoldenLight() { goldenLight.group.visible = true; },
+    staticColliderCount: staticColliders.length,
+    moveWithCollisions,
+    getSafeCameraPosition,
+    updateCameraOcclusion,
     clampPosition(position) {
       position.x = THREE.MathUtils.clamp(position.x, -73, 64);
       position.z = THREE.MathUtils.clamp(position.z, -76, 73);
