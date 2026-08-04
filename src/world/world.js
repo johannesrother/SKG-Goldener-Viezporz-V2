@@ -1353,6 +1353,93 @@ function addSimeonBlockFabric(parent) {
   });
 }
 
+function addPortaForecourt(parent, quality) {
+  const forecourt = new THREE.Group();
+  forecourt.name = 'Porta Nigra – Vorplatz';
+
+  // The real monument needs breathing room. The square is deliberately a
+  // little wider than reality so a player can read the two towers, the gates
+  // and the onward route at once from the isometric camera.
+  const paving = new THREE.Mesh(new THREE.PlaneGeometry(22.6, 17.6), pavingMaterial(22.6, 17.6, 0xd6bd94, 381));
+  paving.rotation.x = -Math.PI / 2;
+  paving.position.set(0, -.018, 65.0);
+  forecourt.add(paving);
+  const centralWalk = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 16.5), pavingMaterial(9.4, 16.5, 0xdcc49d, 382, .9));
+  centralWalk.rotation.x = -Math.PI / 2;
+  centralWalk.position.set(0, -.012, 65.2);
+  forecourt.add(centralWalk);
+  for (const x of [-5.1, 5.1]) {
+    const line = addBox(forecourt, { x, y: -.015, z: 65.1, w: .075, h: .04, d: 15.1, color: 0x837769, roughness: .78, bevel: .008 });
+    line.castShadow = false;
+  }
+
+  // The furniture stays at the outer rim; the central view corridor remains
+  // open and leads naturally through the gates into the city.
+  [[-8.4, 59.4, .05], [8.4, 59.4, -.05], [-8.65, 68.6, Math.PI], [8.65, 68.6, Math.PI]].forEach(([x, z, rotation]) => addBench(forecourt, x, z, rotation));
+  [[-10.0, 61.1], [10.0, 61.15], [-10.05, 67.5], [10.05, 67.55]].forEach(([x, z], index) => addPlanter(forecourt, x, z, index % 2 ? Math.PI / 2 : 0, choose(PALETTE.flower, 760 + index)));
+  [[-9.25, 64.4, .92, 771], [9.25, 64.5, .9, 772], [-10.0, 69.3, .74, 773], [10.0, 69.25, .74, 774]].forEach(([x, z, scale, seed]) => addTree(forecourt, x, z, scale, seed));
+  [[-6.9, 60.0], [6.9, 60.0], [-7.6, 67.7], [7.6, 67.7]].forEach(([x, z], index) => addLamp(forecourt, x, z, quality !== 'low' && index < 2));
+  addBikeRack(forecourt, -10.25, 64.9, Math.PI / 2);
+  addBicycle(forecourt, -10.0, 65.9, .16);
+  addBicycle(forecourt, 9.9, 62.6, -.24);
+  addStreetBin(forecourt, -8.1, 62.0, .2);
+  addStreetBin(forecourt, 8.1, 62.0, -.2);
+  addStreetMusicCorner(forecourt, -9.3, 66.9);
+  addStreetSign(forecourt, 8.8, 59.3, 'SIMEONSTRASSE', 0);
+  addStreetSign(forecourt, 10.2, 68.6, 'CHRISTOPHSTRASSE', Math.PI / 2);
+  addWindFlag(forecourt, -11.0, 58.7, 0xa96445, .12, 81);
+  addWindFlag(forecourt, 11.0, 58.7, 0x547164, -.12, 82);
+  parent.add(forecourt);
+  return forecourt;
+}
+
+function addChristophstrasse(parent) {
+  const street = new THREE.Group();
+  street.name = 'Christophstraße – Vorplatz-Erweiterung';
+
+  // From the eastern rim of the square, the pedestrian route first proceeds
+  // straight and then turns right/south. This establishes the future street
+  // connection now, while keeping its scale intentionally compact.
+  const eastbound = new THREE.Mesh(new THREE.PlaneGeometry(20.2, 7.3), pavingMaterial(20.2, 7.3, 0xd3b88f, 391));
+  eastbound.rotation.x = -Math.PI / 2;
+  eastbound.position.set(19.4, -.016, 65.0);
+  street.add(eastbound);
+  const southbound = new THREE.Mesh(new THREE.PlaneGeometry(7.3, 17.0), pavingMaterial(7.3, 17.0, 0xd0b38a, 392));
+  southbound.rotation.x = -Math.PI / 2;
+  southbound.position.set(29.15, -.016, 57.2);
+  street.add(southbound);
+  for (const z of [61.85, 68.15]) {
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(19.5, 1.08), pavingMaterial(19.5, 1.08, 0xa89f92, 393 + (z > 65 ? 1 : 0), .91));
+    sidewalk.rotation.x = -Math.PI / 2;
+    sidewalk.position.set(19.6, -.01, z);
+    street.add(sidewalk);
+  }
+  for (const x of [25.85, 32.45]) {
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.04, 15.7), pavingMaterial(1.04, 15.7, 0xa89f92, 395 + (x > 29 ? 1 : 0), .91));
+    sidewalk.rotation.x = -Math.PI / 2;
+    sidewalk.position.set(x, -.01, 57.0);
+    street.add(sidewalk);
+  }
+  [[13.0, 71.4, 4.8, 4.7, 401, 'BUCH & KULTUR'], [18.5, 71.4, 5.2, 4.45, 402, 'CAFÉ'], [24.1, 71.4, 4.9, 4.9, 403, 'TRIERER HANDWERK']].forEach(([x, z, w, h, seed, sign]) => {
+    createTownhouse(street, { x, z, w, h, d: 4.4, facade: choose([0xd9c7ad, 0xd09a76, 0xc57d68, 0xe0cfb6], seed), roof: choose(PALETTE.roof, seed + 2), seed, sign });
+  });
+  [[14.5, 58.2, 4.65, 4.25, 411, 'GALERIE'], [20.0, 58.2, 4.9, 4.6, 412, 'EIS'], [35.2, 59.2, 5.0, 4.55, 413, 'STUDIO'], [35.2, 52.9, 4.65, 4.3, 414, 'KAFFEE']].forEach(([x, z, w, h, seed, sign]) => {
+    createTownhouse(street, { x, z, w, h, d: 4.1, facade: choose([0xe0d2bc, 0xc98970, 0xd4ac83, 0xc08b79], seed), roof: choose(PALETTE.roof, seed + 4), seed, sign, rotation: Math.PI });
+  });
+  [[22.4, 56.0, 5.3, 4.45, 421, -Math.PI / 2, 'ATELIER'], [22.4, 49.7, 4.9, 4.7, 422, -Math.PI / 2, null], [35.8, 55.8, 5.05, 4.5, 423, Math.PI / 2, 'BÄCKEREI'], [35.8, 49.8, 4.7, 4.35, 424, Math.PI / 2, null]].forEach(([x, z, w, h, seed, rotation, sign]) => {
+    createTownhouse(street, { x, z, w, h, d: 4.2, facade: choose([0xd4b795, 0xd6a080, 0xe0d3c0, 0xc8806d], seed), roof: choose(PALETTE.roof, seed + 3), seed, sign, rotation });
+  });
+  [[12.2, 63.1], [23.6, 68.7], [29.1, 62.6], [29.2, 49.3]].forEach(([x, z], index) => addPlanter(street, x, z, index % 2 ? Math.PI / 2 : 0, choose(PALETTE.flower, 790 + index)));
+  [[16.0, 68.8], [23.0, 62.2], [28.0, 52.2], [33.0, 62.1]].forEach(([x, z], index) => addLamp(street, x, z, index < 2));
+  addSimeonCafeTables(street, 15.1, 63.3, 3);
+  addSimeonCafeTables(street, 28.1, 61.0, 2);
+  addBicycle(street, 24.3, 67.4, .22);
+  addBikeRack(street, 31.9, 63.7, Math.PI / 2);
+  addStreetSign(street, 25.2, 65.5, 'CHRISTOPHSTRASSE', Math.PI / 2);
+  parent.add(street);
+  return street;
+}
+
 function addSimeonstrasse(parent, quality) {
   const street = new THREE.Group();
   street.name = 'Simeonstraße – Porta Nigra zum Hauptmarkt';
@@ -1390,8 +1477,13 @@ function addSimeonstrasse(parent, quality) {
   addSimeonCafeTables(street, 2.35, 32.7, 3);
   addSimeonCafeTables(street, -2.95, 45.7, 2);
   [[-3.8, 18.6, Math.PI / 2], [4.2, 18.7, -Math.PI / 2], [2.2, 15.2, 0]].forEach(([bx, bz, rot]) => addBench(street, bx, bz, rot));
-  addModernBus(street, -9.8, 59.4);
-  addPortaNigra(street, 0, 64.6, quality);
+  addModernBus(street, -13.3, 64.4);
+  addPortaForecourt(street, quality);
+  addChristophstrasse(street);
+  // The monument sits a few metres farther north than before. The resulting
+  // forecourt makes its full silhouette readable and turns the entrance into
+  // a genuine civic space rather than a dead end at the street edge.
+  addPortaNigra(street, 0, 74.0, quality);
   parent.add(street);
   return street;
 }
@@ -2372,11 +2464,17 @@ export function createWorld(scene, quality = 'medium') {
     [0.3, -74.0, 'walk'], [-2.8, -58.8, 'drink'],
     [-1.4, 55.7, 'photo'], [2.2, 57.0, 'tourist'], [-3.2, 49.2, 'walk'], [2.6, 44.4, 'shop'],
     [-2.4, 39.3, 'phone'], [2.7, 34.7, 'walk'], [-2.8, 29.2, 'talk'], [3.0, 24.6, 'bike'],
-    // A small arriving crowd makes the Porta feel like a real city entrance,
-    // not an empty landmark with a population counter somewhere else.
+    // A lively forecourt gives the Roman gate a proper arrival moment: people
+    // photograph the monument, listen to music, meet and drift onward into the
+    // new Christophstraße bend.
     [-4.4, 57.8, 'tourist'], [-2.5, 59.1, 'photo'], [1.5, 59.2, 'talk'], [4.0, 57.5, 'walk'],
     [-5.2, 53.7, 'phone'], [5.0, 53.4, 'tourist'], [-1.3, 52.3, 'walk'], [2.7, 51.4, 'bike'],
     [-3.8, 47.6, 'shop'], [4.3, 46.5, 'talk'],
+    [-7.45, 66.8, 'music'], [-6.25, 66.6, 'listen'], [-5.45, 65.8, 'listen'],
+    [-2.8, 68.25, 'photo'], [1.85, 68.15, 'photo'], [4.1, 65.9, 'tourist'], [6.35, 63.0, 'talk'],
+    [-2.0, 63.9, 'child'], [-.75, 64.7, 'child'], [2.0, 63.45, 'feed'], [7.7, 66.55, 'walk'],
+    [13.0, 65.0, 'walk'], [16.9, 65.85, 'shop'], [20.8, 64.3, 'talk'], [24.0, 66.2, 'tourist'],
+    [29.0, 59.2, 'photo'], [29.1, 54.0, 'phone'], [31.25, 62.6, 'bike'], [27.35, 50.4, 'walk'],
   ];
   const activePlacement = quality === 'low'
     ? placement.filter((_, index) => index % 2 === 0)
@@ -2392,6 +2490,8 @@ export function createWorld(scene, quality = 'medium') {
       [new THREE.Vector3(12, 0, -17), new THREE.Vector3(12, 0, -27), new THREE.Vector3(12, 0, -38), new THREE.Vector3(12, 0, -49)],
       [new THREE.Vector3(-12, 0, -17), new THREE.Vector3(-12, 0, -27), new THREE.Vector3(-12, 0, -38), new THREE.Vector3(-12, 0, -49)],
       [new THREE.Vector3(12, 0, -49), new THREE.Vector3(12, 0, -59), new THREE.Vector3(0, 0, -68), new THREE.Vector3(-12, 0, -59), new THREE.Vector3(-12, 0, -49)],
+      [new THREE.Vector3(-6.0, 0, 59.5), new THREE.Vector3(-1.5, 0, 64.0), new THREE.Vector3(5.2, 0, 65.1), new THREE.Vector3(13.0, 0, 65.0), new THREE.Vector3(22.6, 0, 65.0), new THREE.Vector3(29.2, 0, 58.2)],
+      [new THREE.Vector3(-2.0, 0, 59.0), new THREE.Vector3(0, 0, 65.2), new THREE.Vector3(.2, 0, 70.0), new THREE.Vector3(0, 0, 77.0)],
     ];
     const citizen = createCitizen(index, {
       mode,
@@ -2401,6 +2501,7 @@ export function createWorld(scene, quality = 'medium') {
       drink: mode === 'drink' || mode === 'sit' || mode === 'shop',
       guitar: mode === 'music',
       bike: mode === 'bike',
+      scale: mode === 'child' ? .56 + hash(index + 207) * .08 : undefined,
       outfit: mode === 'serve' ? 0x293c37 : undefined,
     });
     citizen.position.set(x, 0, z);
@@ -2421,6 +2522,7 @@ export function createWorld(scene, quality = 'medium') {
   });
   pigeons.push(...createPigeons(root, -6.6, -1.65));
   pigeons.push(...createPigeons(root, 1.7, -66.8));
+  pigeons.push(...createPigeons(root, .5, 65.4));
   const flyingBirds = createFlyingBirds(root);
   // These five people are the only authored quest figures. They use the same
   // shared character system as the crowd, so adding the story costs no new
@@ -2498,7 +2600,7 @@ export function createWorld(scene, quality = 'medium') {
       if (!corrected) break;
     }
     resolved.x = THREE.MathUtils.clamp(resolved.x, -72.6, 63.6);
-    resolved.z = THREE.MathUtils.clamp(resolved.z, -75.6, 72.6);
+    resolved.z = THREE.MathUtils.clamp(resolved.z, -75.6, 87.6);
     return resolved;
   }
 
@@ -2747,11 +2849,12 @@ export function createWorld(scene, quality = 'medium') {
     updateCameraOcclusion,
     clampPosition(position) {
       position.x = THREE.MathUtils.clamp(position.x, -73, 64);
-      position.z = THREE.MathUtils.clamp(position.z, -76, 73);
+      position.z = THREE.MathUtils.clamp(position.z, -76, 88);
       return position;
     },
     getLocation(position) {
-      if (Math.abs(position.x) < 9 && position.z > 53.5) return { name: 'Porta Nigra', zone: 'porta' };
+      if (position.x > 7 && position.x < 39 && position.z > 47 && position.z < 72) return { name: 'Christophstraße', zone: 'christophstrasse' };
+      if (Math.abs(position.x) < 11 && position.z > 58) return { name: 'Porta Nigra', zone: 'porta' };
       if (Math.abs(position.x) < 9 && position.z > 17) return { name: 'Simeonstraße', zone: 'simeonstrasse' };
       if (position.x > -21 && position.x < 21 && position.z < -53 && position.z > -76) return { name: 'Kornmarkt', zone: 'kornmarkt' };
       if (position.x > 5 && position.x < 19 && position.z < -12 && position.z > -53) return { name: 'Fleischstraße', zone: 'fleischstrasse' };
