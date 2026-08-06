@@ -323,16 +323,30 @@ button { cursor: pointer; }
   transition: background .15s ease, border-color .15s ease, transform .15s ease;
 }
 .dialogue-choice-list .dialogue-choice:hover { border-color: #efc96d; background: rgba(150, 132, 65, .38); transform: translateX(2px); }
+.group-chat-card { display: block; width: min(460px, calc(100% - 2rem)); padding: .9rem; border-color: rgba(114, 170, 145, .58); background: rgba(10, 25, 22, .97); }
+.group-chat-heading { display: flex; align-items: baseline; gap: .55rem; padding: .05rem .15rem .7rem; border-bottom: 1px solid rgba(188, 213, 181, .18); }
+.group-chat-heading span { color: #8bb39a; font: 800 .57rem Inter, sans-serif; letter-spacing: .13em; }
+.group-chat-heading b { color: #f0ce78; font: 700 1.12rem Georgia, serif; }
+.group-chat-messages { display: grid; gap: .38rem; max-height: min(45vh, 300px); padding: .78rem .14rem 2.3rem; overflow: auto; }
+.group-chat-messages p { width: fit-content; max-width: 94%; margin: 0; padding: .42rem .55rem; color: #eee4d0; border-radius: 3px 10px 10px 10px; background: rgba(74, 104, 83, .46); font: .83rem/1.35 Georgia, serif; }
+.group-chat-messages p:nth-child(even) { justify-self: end; border-radius: 10px 3px 10px 10px; background: rgba(103, 84, 59, .42); }
+.group-chat-messages p b { display: block; margin-bottom: .1rem; color: #f0c76c; font: 800 .68rem Inter, sans-serif; }
 .demo-finale { background: radial-gradient(ellipse at 50% 38%, rgba(54, 37, 20, .31), rgba(0,0,0,.95) 68%); }
 .demo-finale > div { width: min(480px, calc(100% - 2rem)); padding: 1.4rem; }
 .demo-finale p:last-of-type { margin: 1.15rem 0 .6rem; color: #cbbd9d; font: .78rem Inter, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
 .demo-finale ul { display: grid; gap: .42rem; margin: 0; padding: 0; color: #e9d4a0; list-style: none; font: .94rem/1.4 Georgia, serif; }
+.demo-finale ul:not(.is-expanded) li:nth-child(n+7) { display: none; }
 .demo-finale li::before { content: '✦'; margin-right: .55rem; color: #dcae56; }
-.demo-finale button { margin-top: 1.65rem; padding: .63rem 1rem; color: #f3dfb4; border: 1px solid rgba(237, 193, 101, .58); border-radius: 6px; background: rgba(64, 79, 43, .72); font: 700 .75rem Georgia, serif; letter-spacing: .09em; text-transform: uppercase; }
+.demo-finale blockquote { margin: 1rem auto 0; color: #cfc2a5; font: italic .86rem/1.45 Georgia, serif; }
+.demo-finale button { padding: .63rem 1rem; color: #f3dfb4; border: 1px solid rgba(237, 193, 101, .58); border-radius: 6px; background: rgba(64, 79, 43, .72); font: 700 .75rem Georgia, serif; letter-spacing: .09em; text-transform: uppercase; }
 .demo-finale button:hover { filter: brightness(1.15); }
 .demo-finale strong { display: block; margin-top: 1.25rem; color: #e8bd63; font: 800 .75rem Inter, sans-serif; letter-spacing: .18em; }
+.finale-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; margin-top: 1.35rem; }
+.finale-actions button:last-child { grid-column: 1 / -1; background: rgba(47, 63, 47, .7); }
 
 @media (max-width: 700px) {
   .dialogue-choice-card { grid-template-columns: 65px minmax(0, 1fr); }
   .dialogue-choice-card .dialogue-copy { min-height: 190px; }
+  .group-chat-card { bottom: max(.8rem, env(safe-area-inset-bottom)); }
+  .finale-actions { grid-template-columns: 1fr; }.finale-actions button:last-child { grid-column: auto; }
 }
