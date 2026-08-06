@@ -68,7 +68,7 @@ class HauptmarktSlice {
         onIntroEnd: () => this.ui.revealHud(),
         onCinematicEnd: () => this.ui.showEnding(),
       });
-      this.ui.begin(profile, this.engine.world.visitorCount, false);
+      this.ui.begin(profile, this.engine.world.visitorCount, true);
       this.quest = new CityStrollQuest({
         world: this.engine.world,
         playerName: profile.name,
@@ -80,11 +80,12 @@ class HauptmarktSlice {
           onMemory: (memory) => this.ui.showMemory(memory),
           onProgress: (finale) => this.audio.progress(finale),
           onWineMoment: () => this.engine?.beginWineMoment(this.engine.world.wineStandPoint),
+          onWineMomentEnd: () => this.engine?.endWineMoment(),
           onCinematic: (target, duration) => this.engine?.beginCinematic(target, duration),
         },
       });
       this.quest.begin();
-      this.engine.beginMarketIntro();
+      this.engine.beginStationIntro();
     } catch (error) {
       this.ui.showWebGLError(error);
     }
