@@ -428,7 +428,13 @@ export class GameEngine {
     const time = this.clock.elapsedTime;
     this.updatePlayer(delta, time);
     this.updateCamera(delta);
-    this.world.update(time, this.player.position);
+    // Keep recruited friends behind the player in a walking formation.
+    const playerFacing = new THREE.Vector3(
+      Math.sin(this.player.rotation.y),
+      0,
+      Math.cos(this.player.rotation.y),
+    );
+    this.world.update(time, this.player.position, playerFacing);
     this.callbacks.onFrame?.({ time, position: this.getPosition(), visitorCount: this.world.visitorCount, location: this.location });
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
