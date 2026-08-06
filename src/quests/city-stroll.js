@@ -1,206 +1,172 @@
-const STAGES = [
-  {
-    id: 'johannes',
-    name: 'Johannes',
-    objective: 'Treffe Johannes am Weinstand.',
-  },
-  {
-    id: 'marc',
-    name: 'Marc',
-    objective: 'Triff Marc am Domfreihof.',
-    lines: () => [
-      { speaker: 'Marc', text: 'Ich wusste doch, ihr seid wieder später dran als geplant.' },
-      { speaker: 'Johannes', text: 'Wir sind pünktlich.' },
-      { speaker: 'Marc', text: 'Natürlich.' },
-      { speaker: 'Marc', text: 'Hier ist es wenigstens ruhig. Und der Dom sieht bei Sonnenuntergang immer so aus, als hätte er das alles geplant.' },
-      { speaker: 'Johannes', text: 'Komm mit. Jürgen zeigt uns bestimmt wieder eine Ecke, die angeblich niemand kennt.' },
-    ],
-  },
-  {
-    id: 'juergen',
-    name: 'Jürgen',
-    objective: 'Triff Jürgen im Margaretengäßchen.',
-    lines: () => [
-      { speaker: 'Jürgen', text: 'Na? Habt ihr euch verlaufen?' },
-      { speaker: 'Marc', text: 'Wir haben nur auf dich gewartet.' },
-      { speaker: 'Jürgen', text: 'Das rede ich mir später auch ein.' },
-      { speaker: 'Jürgen', text: 'Die kleinen Gassen sind besser. Da merkt man wenigstens, dass Trier nicht nur aus Blickachsen besteht.' },
-      { speaker: 'Johannes', text: 'Charly ist am Kornmarkt. Falls er nicht gerade wieder jemanden kennt.' },
-    ],
-  },
-  {
-    id: 'charly',
-    name: 'Charly',
-    objective: 'Triff Charly am Kornmarkt.',
-    lines: () => [
-      { speaker: 'Charly', text: 'Na endlich. Ich dachte, ihr seid direkt im Chrome gelandet.' },
-      { speaker: 'Charly', text: 'Ah, hi! Ja, später! Grüß deine Schwester!' },
-      { speaker: 'Marc', text: 'Du kennst wirklich jeden, oder?' },
-      { speaker: 'Charly', text: 'Nicht jeden. Aber die interessanten Leute erkennt man ja.' },
-      { speaker: 'Charly', text: 'Weber sitzt in der Fleischstraße. Der beobachtet bestimmt gerade wieder das Leben und nennt es Recherche.' },
-    ],
-  },
-  {
-    id: 'weber',
-    name: 'Weber',
-    objective: 'Triff Weber in der Fleischstraße.',
-    lines: () => [
-      { speaker: 'Weber', text: 'Jetzt seid ihr endlich komplett.' },
-      { speaker: 'Johannes', text: 'Eigentlich fehlst nur noch du.' },
-      { speaker: 'Weber', text: 'Vielleicht.' },
-      { speaker: 'Charly', text: 'Das war wieder eine komplette Weber-Antwort.' },
-      { speaker: 'Weber', text: 'Dann gehen wir zurück. Ein Abend fängt erst am Weinstand richtig an.' },
-    ],
-  },
-];
+import {
+  AMBIENT_LINES,
+  CHAPTER_TITLE,
+  FINALE_MEMORIES,
+  GROUP_CHAT,
+  HIDDEN_HINTS,
+  OPTIONAL_EVENTS,
+  RETURN_CONFLICT,
+  STORY_MOMENTS,
+  STORY_STAGES,
+} from '../data/chapter-one.js';
+import {
+  clearChapterOneProgress,
+  createChapterOneProgress,
+  loadChapterOneProgress,
+  persistChapterOneProgress,
+} from '../save/save-system.js';
 
-const OPTIONAL_EVENTS = [
-  {
-    id: 'plectrum',
-    point: { x: -14.1, z: 71.8 },
-    prompt: 'Dem Straßenmusiker helfen',
-    memory: 'Ein Lied vor der Porta',
-    lines: [
-      { speaker: 'Straßenmusiker', text: 'Mein Plektrum hat sich offenbar für eine eigene Stadtführung entschieden.' },
-      { speaker: 'Du', text: 'Es liegt direkt neben deinem Koffer.' },
-      { speaker: 'Straßenmusiker', text: 'Perfekt. Trier ist klein, aber mein Blickfeld offensichtlich kleiner.' },
-    ],
-  },
-  {
-    id: 'tourist',
-    point: { x: -8.2, z: 57.9 },
-    prompt: 'Einem Touristen den Weg zeigen',
-    memory: 'Ein guter Weg',
-    lines: [
-      { speaker: 'Tourist', text: 'Entschuldigung – geht es von hier zum Dom?' },
-      { speaker: 'Du', text: 'Durch die Simeonstraße zum Hauptmarkt und dann die Sternstraße entlang.' },
-      { speaker: 'Tourist', text: 'Danke! Dann schaue ich mir unterwegs wohl noch viel mehr Trier an.' },
-    ],
-  },
-  {
-    id: 'dog',
-    point: { x: -7.2, z: 68.2 },
-    prompt: 'Den kleinen Hund begrüßen',
-    memory: 'Eine neugierige Begegnung',
-    lines: [
-      { speaker: 'Hundebesitzerin', text: 'Milo wollte unbedingt noch die Tauben kontrollieren.' },
-      { speaker: 'Du', text: 'Er nimmt seine Aufgabe offensichtlich sehr ernst.' },
-      { speaker: 'Hundebesitzerin', text: 'Das ist der erste sinnvolle Plan, den er heute hatte.' },
-    ],
-  },
-  {
-    id: 'photo',
-    point: { x: -5.4, z: 59.7 },
-    prompt: 'Einem Fotografen helfen',
-    memory: 'Blick auf die Porta',
-    lines: [
-      { speaker: 'Fotograf', text: 'Von wo sieht die Porta eigentlich am besten aus?' },
-      { speaker: 'Du', text: 'Ein paar Schritte zurück. Dann passt der ganze Bogen ins Bild.' },
-      { speaker: 'Fotograf', text: 'Genau. Manchmal braucht es nur einen Schritt weniger Eile.' },
-    ],
-  },
-  {
-    id: 'pigeons',
-    point: { x: -2.7, z: 67.9 },
-    prompt: 'Den Tauben zusehen',
-    memory: 'Tauben am Abend',
-    lines: [
-      { speaker: 'Kind', text: 'Die da kennt mich schon.' },
-      { speaker: 'Du', text: 'Dann bist du hier wohl Stammgast.' },
-      { speaker: 'Kind', text: 'Klar. Die Porta ist unser Treffpunkt.' },
-    ],
-  },
-];
+const PORTA_ARRIVAL = { x: -2, z: 68 };
 
-const AMBIENT_LINES = {
-  hauptbahnhof: [
-    { requires: 0, speaker: 'Erinnerung', text: 'Ankommen, tief durchatmen, dann einfach loslaufen.' },
-  ],
-  christophstrasse: [
-    { requires: 1, speaker: 'Johannes', text: 'Vom Bahnhof bis zur Porta hat Trier schon ziemlich viel Feierabend vor.' },
-  ],
-  porta: [
-    { requires: 1, speaker: 'Johannes', text: 'An der Porta merkt man sofort: Jetzt ist man wirklich in Trier.' },
-  ],
-  simeonstrasse: [
-    { requires: 2, speaker: 'Marc', text: 'Eine Einkaufsstraße, zwei Richtungen und trotzdem stehen alle mitten im Weg. Klassisch.' },
-    { requires: 3, speaker: 'Jürgen', text: 'Da vorne gibt es das beste Eis. Das ist keine Meinung, das ist Orientierung.' },
-  ],
-  hauptmarkt: [
-    { requires: 1, speaker: 'Johannes', text: 'Hier ist heute richtig was los. Genau so muss ein Freitag aussehen.' },
-    { requires: 3, speaker: 'Jürgen', text: 'Wenn wir hier kurz stehen bleiben, findet uns Trier schon wieder.' },
-  ],
-  domfreihof: [
-    { requires: 2, speaker: 'Marc', text: 'Der Dom sieht heute irgendwie besonders gut aus. Frech eigentlich.' },
-    { requires: 2, speaker: 'Johannes', text: 'Wir haben keinen Plan. Aber wir haben einen Dom. Das zählt fast.' },
-  ],
-  margaretengaesschen: [
-    { requires: 3, speaker: 'Jürgen', text: 'Die kleinen Gassen sind der Beweis, dass man sich ruhig mal verlaufen darf.' },
-  ],
-  kornmarkt: [
-    { requires: 4, speaker: 'Charly', text: 'Hier treffen wir später bestimmt noch jemanden. Oder alle auf einmal.' },
-    { requires: 3, speaker: 'Jürgen', text: 'Ein Brunnen macht jeden Platz automatisch so, als wäre alles geregelt.' },
-  ],
-  fleischstrasse: [
-    { requires: 5, speaker: 'Weber', text: 'Von hier ist es nicht mehr weit. In Trier ist das eine ziemlich genaue Angabe.' },
-    { requires: 4, speaker: 'Johannes', text: 'Wir bleiben zusammen. Das ist die wichtigste Regel vom SKG.' },
-  ],
-  brotstrasse: [
-    { requires: 2, speaker: 'Marc', text: 'Brotstraße. Der Name verspricht viel und löst damit sofort Hunger aus.' },
-  ],
-};
-
-const CHAPTER_TITLE = 'Ein Freitagabend in Trier';
+function clampStage(index) {
+  return Math.max(0, Math.min(STORY_STAGES.length - 1, Number(index) || 0));
+}
 
 export class CityStrollQuest {
   constructor({ world, playerName, callbacks = {} }) {
     this.world = world;
     this.playerName = playerName;
     this.callbacks = callbacks;
-    this.stageIndex = 0;
-    this.mode = 'arrival';
+    this.progress = loadChapterOneProgress();
+    this.stageIndex = clampStage(this.progress.stageIndex);
+    this.mode = this.progress.mode || 'arrival';
     this.talking = false;
-    this.finished = false;
+    this.finished = Boolean(this.progress.completed);
     this.promptVisible = false;
     this.nextAmbientAt = Infinity;
-    this.quietUntil = 0;
     this.currentTime = 0;
-    this.completedEvents = new Set();
+    this.playerPosition = null;
+    this.completedEvents = new Set(this.progress.optionalEvents);
+    this.foundHints = new Set(this.progress.hints);
+    this.memories = new Set(this.progress.memories);
+    this.returnConflictPlayed = false;
+  }
+
+  get stage() {
+    return STORY_STAGES[this.stageIndex] || STORY_STAGES[0];
+  }
+
+  save(extra = {}) {
+    this.progress = {
+      ...this.progress,
+      ...extra,
+      started: true,
+      completed: this.finished,
+      mode: this.mode,
+      stageIndex: this.stageIndex,
+      recruited: [...this.world.questFriends ? Object.values(this.world.questFriends)
+        .filter((friend) => friend.userData.questFriend.recruited)
+        .map((friend) => friend.userData.questFriend.id) : []],
+      memories: [...this.memories],
+      optionalEvents: [...this.completedEvents],
+      hints: [...this.foundHints],
+    };
+    persistChapterOneProgress(this.progress);
+  }
+
+  reset() {
+    clearChapterOneProgress();
+    this.progress = createChapterOneProgress();
+  }
+
+  setMoment(id) {
+    const moment = STORY_MOMENTS[id] || STORY_MOMENTS.arrival;
+    this.progress.moment = id;
+    this.world.setEveningProgress?.(moment.light);
+    this.callbacks.onTimeOfDay?.(moment.clock);
+  }
+
+  addMemory(label) {
+    if (this.memories.has(label)) return;
+    this.memories.add(label);
+    this.callbacks.onMemory?.(label);
+    this.save();
   }
 
   begin(time = 0) {
     this.currentTime = time;
+    if (this.progress.started && !this.progress.completed) {
+      this.restoreProgress();
+      return;
+    }
     this.mode = 'arrival';
+    this.finished = false;
+    this.stageIndex = 0;
+    this.setMoment('arrival');
+    this.world.setQuestTarget(null);
+    this.callbacks.onTutorial?.('WASD oder Klick zum Laufen · E zum Ansprechen · M für die Karte');
+    this.talking = true;
+    const completeChat = () => {
+      this.talking = false;
+      this.addMemory('Willkommen in Trier');
+      this.beginRouteToPorta();
+    };
+    if (this.callbacks.onChat) this.callbacks.onChat(GROUP_CHAT, completeChat);
+    else this.callbacks.onDialogue?.(GROUP_CHAT.messages, completeChat);
+  }
+
+  restoreProgress() {
+    this.stageIndex = clampStage(this.progress.stageIndex);
+    this.mode = this.progress.mode || 'routeToPorta';
+    this.finished = Boolean(this.progress.completed);
+    this.setMoment(this.progress.moment || 'arrival');
+    (this.progress.recruited || []).forEach((id) => this.world.recruitFriend(id, this.playerPosition || this.world.arrivalPoint));
+    if (this.finished) {
+      this.world.setQuestTarget(null);
+      this.callbacks.onQuestChange?.({ title: CHAPTER_TITLE, objective: 'Kapitel abgeschlossen. Trier gehört jetzt dir.', count: 'ENDE', targetId: null });
+      this.callbacks.onChapterComplete?.({ memories: [...this.memories] });
+      return;
+    }
+    if (this.mode === 'routeToPorta') this.beginRouteToPorta(true);
+    else if (this.mode === 'routeToMarket') this.beginRouteToMarket(true);
+    else if (this.mode === 'explore') this.setStage(this.stageIndex, true);
+    else if (this.mode === 'return') this.beginReturnToWine(true);
+    else if (this.mode === 'portaReturn') this.startWalkToPorta(true);
+    else this.beginRouteToPorta(true);
+  }
+
+  beginRouteToPorta(restoring = false) {
+    this.mode = 'routeToPorta';
     this.world.setQuestTarget(null);
     this.callbacks.onQuestChange?.({
       title: CHAPTER_TITLE,
-      objective: 'Komm entspannt am Hauptmarkt an. Johannes wartet später am Weinstand.',
+      objective: 'Geh Richtung Porta Nigra und anschließend zum Hauptmarkt.',
       count: 'ANKOMMEN',
-      targetId: null,
+      targetId: 'porta',
     });
-    this.talking = true;
-    this.callbacks.onDialogue?.([
-      { speaker: 'Johannes', text: `Willkommen in Trier, ${this.playerName}!` },
-      { speaker: 'Johannes', text: 'Wir treffen uns später am Weinstand.' },
-      { speaker: 'Johannes', text: 'Aber komm ganz entspannt. Die anderen treiben sich sowieso wieder überall herum.' },
-    ], () => {
-      this.talking = false;
-      this.setStage(0);
-      this.nextAmbientAt = this.currentTime + 55 + Math.random() * 28;
-    });
+    this.setPrompt(null);
+    if (!restoring) this.save();
   }
 
-  get stage() {
-    return STAGES[this.stageIndex] || null;
+  beginRouteToMarket(restoring = false) {
+    this.mode = 'routeToMarket';
+    this.setMoment('porta');
+    this.world.setQuestTarget('johannes');
+    this.addMemory('Erster Blick auf die Porta Nigra');
+    this.callbacks.onQuestChange?.({
+      title: CHAPTER_TITLE,
+      objective: 'Geh weiter zum Hauptmarkt. Johannes wartet am Weinstand.',
+      count: 'ANKOMMEN',
+      targetId: 'johannes',
+    });
+    this.setPrompt(null);
+    if (!restoring) this.save();
   }
 
-  setStage(index) {
-    this.stageIndex = index;
+  setStage(index, restoring = false) {
+    this.stageIndex = clampStage(index);
     this.mode = 'explore';
     const stage = this.stage;
+    this.setMoment(stage.moment);
     this.world.setQuestTarget(stage.id);
-    this.callbacks.onQuestChange?.({ title: CHAPTER_TITLE, objective: stage.objective, count: `${index + 1}/5`, targetId: stage.id });
+    this.callbacks.onQuestChange?.({
+      title: CHAPTER_TITLE,
+      objective: stage.objective,
+      count: `${this.stageIndex + 1}/${STORY_STAGES.length}`,
+      targetId: stage.id,
+    });
     this.setPrompt(null);
+    if (!restoring) this.save();
   }
 
   isNear(target, position, radius = 2.25) {
@@ -211,8 +177,11 @@ export class CityStrollQuest {
     return dx * dx + dz * dz < radius * radius;
   }
 
-  nearbyOptional(position) {
-    return OPTIONAL_EVENTS.find((event) => !this.completedEvents.has(event.id) && this.isNear(event.point, position, 2.05));
+  nearbyDiscovery(position) {
+    const event = OPTIONAL_EVENTS.find((item) => !this.completedEvents.has(item.id) && this.isNear(item.point, position, 2.1));
+    if (event) return { ...event, type: 'event' };
+    const hint = HIDDEN_HINTS.find((item) => !this.foundHints.has(item.id) && this.isNear(item.point, position, 2.05));
+    return hint ? { ...hint, type: 'hint' } : null;
   }
 
   update(frame) {
@@ -221,20 +190,22 @@ export class CityStrollQuest {
     this.playerPosition = position;
     this.currentTime = frame.time;
 
-    if (this.mode === 'quiet') {
-      if (frame.time >= this.quietUntil) this.startMemoryRound();
+    if (this.mode === 'routeToPorta') {
+      const atPorta = frame.location?.zone === 'porta' || this.isNear(PORTA_ARRIVAL, position, 9.5);
+      if (atPorta) this.beginRouteToMarket();
       return;
     }
 
-    const optional = this.nearbyOptional(position);
-    if (this.mode === 'explore') {
+    const discovery = this.nearbyDiscovery(position);
+    if (this.mode === 'routeToMarket' || this.mode === 'explore') {
       const stage = this.stage;
       const friend = this.world.questFriends[stage.id];
-      this.setPrompt(this.isNear(friend, position) ? `Mit ${stage.name} sprechen` : optional?.prompt || null);
+      this.setPrompt(this.isNear(friend, position) ? `Mit ${stage.name} sprechen` : discovery?.prompt || null);
     } else if (this.mode === 'return') {
-      this.setPrompt(this.isNear(this.world.wineStandPoint, position, 3) ? 'Mit der Gruppe am Weinstand zusammensitzen' : optional?.prompt || null);
+      this.setPrompt(this.isNear(this.world.wineStandPoint, position, 3) ? 'Mit der Gruppe am Weinstand zusammensitzen' : discovery?.prompt || null);
+      if (!this.returnConflictPlayed && frame.time >= this.nextAmbientAt) this.playReturnConflict();
     } else if (this.mode === 'portaReturn') {
-      this.setPrompt(this.isNear(this.world.portaFinalePoint, position, 2.25) ? 'Den alten Viezporz ansehen' : optional?.prompt || null);
+      this.setPrompt(this.isNear(this.world.portaFinalePoint, position, 2.25) ? 'Den zweiten Viezporz ansehen' : discovery?.prompt || null);
     }
 
     const canChatOnWalk = ['explore', 'return', 'portaReturn'].includes(this.mode) && this.world.recruitedCount > 0;
@@ -249,22 +220,16 @@ export class CityStrollQuest {
 
   interact(position) {
     if (this.finished || this.talking) return;
-    const optional = this.nearbyOptional(position);
-
-    if (this.mode === 'explore') {
+    const discovery = this.nearbyDiscovery(position);
+    const canMeetFriend = this.mode === 'routeToMarket' || this.mode === 'explore';
+    if (canMeetFriend) {
       const stage = this.stage;
       const friend = this.world.questFriends[stage.id];
       if (this.isNear(friend, position)) {
-        this.talking = true;
-        this.setPrompt(null);
-        if (stage.id === 'johannes') this.startJohannesConversation(stage);
-        else this.callbacks.onDialogue?.(stage.lines(this.playerName), () => this.finishStage(stage));
+        this.startFriendConversation(stage);
         return;
       }
-      if (optional) this.playOptional(optional);
-      return;
     }
-
     if (this.mode === 'return' && this.isNear(this.world.wineStandPoint, position, 3)) {
       this.beginWineStand();
       return;
@@ -273,63 +238,67 @@ export class CityStrollQuest {
       this.beginPortaCliffhanger();
       return;
     }
-    if (optional) this.playOptional(optional);
+    if (discovery) this.playDiscovery(discovery);
   }
 
-  playOptional(event) {
+  playDiscovery(discovery) {
     this.talking = true;
     this.setPrompt(null);
-    this.callbacks.onDialogue?.(event.lines, () => {
-      this.completedEvents.add(event.id);
-      this.callbacks.onMemory?.(event.memory);
+    this.callbacks.onDialogue?.(discovery.lines, () => {
+      if (discovery.type === 'hint') this.foundHints.add(discovery.id);
+      else this.completedEvents.add(discovery.id);
+      this.addMemory(discovery.memory);
       this.talking = false;
-      this.nextAmbientAt = this.currentTime + 38 + Math.random() * 22;
+      this.nextAmbientAt = this.currentTime + 40 + Math.random() * 24;
+      this.save();
     });
   }
 
-  startJohannesConversation(stage) {
-    const opening = [
-      { speaker: 'Johannes', text: `Da bist du ja, ${this.playerName}.` },
-      { speaker: 'Johannes', text: 'Perfektes Timing.' },
-      { speaker: 'Johannes', text: 'Eigentlich wollten wir schon los … aber wie immer fehlen noch fast alle.' },
-    ];
-    this.callbacks.onDialogue?.(opening, () => {
-      this.callbacks.onChoice?.({
-        speaker: 'Johannes',
-        text: 'Was sagst du?',
-        choices: [
-          { id: 'missing', label: 'Wer fehlt denn?' },
-          { id: 'collect', label: 'Dann sammeln wir sie eben ein.' },
-          { id: 'viez', label: 'Erst mal einen Viez?' },
-        ],
-      }, (choice) => {
-        const replies = {
-          missing: 'Marc, Jürgen, Charly und Weber. Also praktisch alle, die behauptet haben, sie wären gleich da.',
-          collect: 'Das ist die richtige Einstellung. Trier ist klein genug, wir finden sie schon.',
-          viez: 'Verlockend. Aber wenn wir jetzt anfangen, kommen wir morgen noch nicht am Dom an.',
-        };
-        this.callbacks.onDialogue?.([
-          { speaker: 'Johannes', text: replies[choice] || replies.collect },
-          { speaker: 'Johannes', text: 'Komm. Marc wartet bestimmt wieder am Dom.' },
-        ], () => this.finishStage(stage, 'Der erste SKG'));
+  startFriendConversation(stage) {
+    this.talking = true;
+    this.setPrompt(null);
+    const seenTourist = stage.id === 'marc' && this.completedEvents.has('tourist')
+      ? [{ speaker: 'Tourist', text: 'Danke noch einmal für den Tipp! Der Weg zum Dom war wirklich nicht zu verfehlen.' }]
+      : [];
+    this.callbacks.onDialogue?.([...seenTourist, ...stage.opening], () => {
+      this.callbacks.onChoice?.(stage.choice, (choice) => {
+        const reply = stage.choice.replies[choice] || [];
+        this.callbacks.onDialogue?.([...reply, ...stage.closing], () => this.finishStage(stage));
       });
     });
   }
 
-  finishStage(stage, memory = null) {
+  finishStage(stage) {
     this.world.recruitFriend(stage.id, this.playerPosition);
-    if (memory) this.callbacks.onMemory?.(memory);
-    if (stage.id === 'weber') this.callbacks.onMemory?.('Alle sind da');
-    this.callbacks.onProgress?.(false);
+    this.addMemory(stage.memory);
     this.talking = false;
-    this.nextAmbientAt = (this.currentTime || 0) + 48 + Math.random() * 34;
-    if (this.stageIndex < STAGES.length - 1) {
+    this.nextAmbientAt = this.currentTime + 48 + Math.random() * 34;
+    if (this.stageIndex < STORY_STAGES.length - 1) {
       this.setStage(this.stageIndex + 1);
       return;
     }
+    this.beginReturnToWine();
+  }
+
+  beginReturnToWine(restoring = false) {
     this.mode = 'return';
+    this.setMoment('weber');
     this.world.setQuestTarget(null);
-    this.callbacks.onQuestChange?.({ title: CHAPTER_TITLE, objective: 'Geht gemeinsam zurück zum Weinstand am Hauptmarkt.', count: '5/5', targetId: 'return' });
+    this.addMemory('Alle sind da');
+    this.callbacks.onQuestChange?.({ title: CHAPTER_TITLE, objective: 'Kehrt gemeinsam zum Weinstand am Hauptmarkt zurück.', count: '5/5', targetId: 'return' });
+    this.nextAmbientAt = this.currentTime + 38 + Math.random() * 22;
+    this.setPrompt(null);
+    if (!restoring) this.save();
+  }
+
+  playReturnConflict() {
+    this.returnConflictPlayed = true;
+    this.talking = true;
+    this.setPrompt(null);
+    this.callbacks.onDialogue?.(RETURN_CONFLICT, () => {
+      this.talking = false;
+      this.nextAmbientAt = this.currentTime + 58 + Math.random() * 32;
+    });
   }
 
   playAmbient(frame) {
@@ -345,92 +314,112 @@ export class CityStrollQuest {
   beginWineStand() {
     this.mode = 'wine';
     this.talking = true;
+    this.setMoment('wine');
     this.setPrompt(null);
     this.world.seatFriendsAtWine();
     this.callbacks.onWineMoment?.();
     this.callbacks.onDialogue?.([
       { speaker: 'Johannes', text: 'So. Jetzt sind wir wirklich alle da.' },
-      { speaker: 'Charly', text: 'Die wichtige Frage: Was trinken wir?' },
+      { speaker: 'Johannes', text: 'Was darf es sein?' },
     ], () => {
       this.callbacks.onChoice?.({
-        speaker: 'Weinstand',
-        text: 'Du bestellst:',
-        choices: [
-          { id: 'viez', label: 'Viez' },
-          { id: 'bier', label: 'Bier' },
-          { id: 'schorle', label: 'Schorle' },
-        ],
+        speaker: 'Weinstand', text: 'Du bestellst:',
+        choices: [{ id: 'viez', label: 'Viez' }, { id: 'bier', label: 'Bier' }, { id: 'schorle', label: 'Schorle' }],
       }, (choice) => this.startQuietMoment(choice));
     });
   }
 
   startQuietMoment(choice) {
     const drinks = {
-      viez: 'Viez. Ehrensache.',
-      bier: 'Ein Bier. Johannes nickt anerkennend.',
-      schorle: 'Eine Schorle. Marc behauptet, das sei vernünftig.',
+      viez: 'Sehr vernünftig.',
+      bier: 'Auch akzeptabel.',
+      schorle: 'Dann bleibt wenigstens einer von uns aufmerksam.',
     };
-    this.callbacks.onDialogue?.([{ speaker: this.playerName, text: drinks[choice] || drinks.viez }], () => {
-      this.talking = false;
+    this.progress.drink = choice;
+    this.callbacks.onDialogue?.([{ speaker: 'Johannes', text: drinks[choice] || drinks.viez }], () => {
       this.mode = 'quiet';
-      this.quietUntil = (this.currentTime || 0) + 6.2;
+      this.talking = false;
       this.callbacks.onQuestChange?.({ title: CHAPTER_TITLE, objective: 'Genießt für einen Moment den Abend.', count: '5/5', targetId: null });
+      this.save();
+      // The pause is intentional but never blocks the player for long.
+      window.setTimeout(() => this.startMemoryRound(), 2200);
     });
   }
 
   startMemoryRound() {
+    if (this.mode !== 'quiet') return;
     this.mode = 'memories';
     this.talking = true;
     this.callbacks.onDialogue?.([
-      { speaker: 'Johannes', text: 'Mein bester Trier-Moment? Wenn alle sagen, sie sind gleich da – und wir trotzdem irgendwann komplett sind.' },
-      { speaker: 'Marc', text: 'Der Dom nach einem langen Tag. Mehr Pathos kriege ich nicht hin.' },
-      { speaker: 'Jürgen', text: 'Eine Gasse, in der niemand weiß, wohin er wollte. Das ist sehr Trier.' },
-      { speaker: 'Charly', text: 'Wenn ich auf dem Kornmarkt fünf Leute grüße und drei davon wirklich kenne.' },
-      { speaker: 'Weber', text: 'Wenn ein Abend einfach gut bleibt, ohne dass man erklären muss warum.' },
+      { speaker: 'Johannes', text: 'Ich mag eigentlich genau solche Abende. Kein Plan. Einfach loslaufen und schauen, was passiert.' },
+      { speaker: 'Marc', text: 'Am besten sind sowieso die Abende, an denen man angeblich nur kurz bleibt.' },
+      { speaker: 'Jürgen', text: 'Und am Ende steht man irgendwo, wo man gar nicht hinwollte.' },
+      { speaker: 'Charly', text: 'Aber meistens kennt dort jemand jemanden.' },
+      { speaker: 'Weber', text: '…' },
     ], () => this.startLegend());
   }
 
   startLegend() {
     this.mode = 'legend';
     this.talking = true;
+    this.setMoment('legend');
+    this.world.revealWebersPorz?.();
+    this.addMemory('Webers alter Viezporz');
     this.callbacks.onDialogue?.([
       { speaker: 'Charly', text: 'Bitte erzähl jetzt nicht schon wieder diese Geschichte.' },
       { speaker: 'Weber', text: 'Warum eigentlich?' },
       { speaker: 'Johannes', text: 'Weil jedes Mal etwas anderes passiert.' },
       { speaker: 'Weber', text: 'Genau deshalb.' },
-      { speaker: 'Weber', text: 'Vor vielen Jahren traf sich hier jede Woche dieselbe Gruppe von Freunden.' },
-      { speaker: 'Weber', text: 'Sie trafen sich immer am Weinstand. Sie lachten, tranken und zogen gemeinsam durch Trier.' },
+      { speaker: 'Weber', text: 'Den Porz habe ich von meinem Großvater bekommen. Er hat immer behauptet, es gäbe noch einen zweiten.' },
+      { speaker: 'Marc', text: 'Natürlich.' },
+      { speaker: 'Weber', text: 'Einen Goldenen.' },
+      { speaker: 'Marc', text: 'Jetzt wird es langsam besser.' },
+      { speaker: 'Weber', text: 'Vor vielen Jahren traf sich hier am Weinstand jedes Wochenende dieselbe Gruppe von Freunden.' },
+      { speaker: 'Weber', text: 'Sie lachten. Sie tranken. Sie zogen gemeinsam durch Trier.' },
       { speaker: 'Weber', text: 'Eines Abends verschwand einer von ihnen.' },
       { speaker: 'Weber', text: 'Wochen später behaupteten Menschen, sie hätten ihn mit einem goldenen Viezporz durch Trier laufen sehen.' },
-      { speaker: 'Weber', text: 'Seitdem erzählt man sich: Der Goldene Viezporz erscheint nur Menschen, die gemeinsam unterwegs sind.' },
-      { speaker: 'Weber', text: 'Niemand weiß, ob diese Geschichte wahr ist.' },
+      { speaker: 'Weber', text: 'Seitdem erzählt man sich, dass es zwei Porze gibt. Diesen hier. Und den Goldenen.' },
+      { speaker: 'Weber', text: 'Mein Großvater sagte immer: Wenn beide wieder zusammenkommen, beginnt eine Geschichte, die besser vergessen geblieben wäre.' },
+      { speaker: 'Marc', text: 'Du hast gerade noch gesagt, du hättest ihm nicht geglaubt.' },
+      { speaker: 'Weber', text: 'Habe ich auch nicht.' },
     ], () => this.startWalkToPorta());
   }
 
-  startWalkToPorta() {
+  startWalkToPorta(restoring = false) {
     this.world.releaseFriendsFromWine?.();
     this.callbacks.onWineMomentEnd?.();
-    this.callbacks.onMemory?.('Die Legende vom Goldenen Viezporz');
+    this.addMemory('Die Legende vom Goldenen Viezporz');
     this.mode = 'portaReturn';
     this.talking = false;
     this.nextAmbientAt = this.currentTime + 52 + Math.random() * 24;
     this.callbacks.onQuestChange?.({ title: CHAPTER_TITLE, objective: 'Geht gemeinsam Richtung Porta Nigra.', count: 'Abendspaziergang', targetId: 'porta' });
+    this.setPrompt(null);
+    if (!restoring) this.save();
   }
 
   beginPortaCliffhanger() {
     this.mode = 'cliffhanger';
     this.talking = true;
+    this.setMoment('finale');
     this.setPrompt(null);
     this.world.revealGoldenLight();
     this.callbacks.onProgress?.(true);
     this.callbacks.onDialogue?.([
-      { speaker: 'Johannes', text: 'Der lag eben noch nicht da …' },
-      { speaker: 'Marc', text: 'Bitte sag, das war nicht nur der Viez.' },
-      { speaker: 'Jürgen', text: 'Das ist keine Straßenlaterne.' },
-      { speaker: 'Weber', text: 'Ich habe gehofft, dass wir ihn nie finden würden …' },
+      { speaker: 'Johannes', text: 'Lag der eben schon da?' },
+      { speaker: 'Marc', text: 'Nein.' },
+      { speaker: 'Charly', text: 'Ganz sicher nicht.' },
+      { speaker: 'Jürgen', text: 'Das ist doch derselbe.' },
+      { speaker: 'Weber', text: 'Nein. Meiner ist hier.' },
+      { speaker: 'Erzählung', text: 'Für zwei Sekunden schimmert der zweite Porz warm golden. Ein kurzes Klirren. Dann ist es wieder still.' },
+      { speaker: 'Weber', text: '…das kann nicht sein.' },
+      { speaker: 'Weber', text: 'Wir sollten morgen wiederkommen.' },
     ], () => {
-      this.callbacks.onMemory?.('Ein Sommerabend');
+      this.addMemory('Ein Sommerabend');
+      this.addMemory('Der zweite Porz');
+      FINALE_MEMORIES.forEach((memory) => this.addMemory(memory));
       this.finished = true;
+      this.save({ completed: true, mode: 'complete' });
+      this.callbacks.onChapterComplete?.({ memories: [...this.memories], drink: this.progress.drink });
       this.callbacks.onCinematic?.(this.world.portaFinalePoint || this.world.goldenLightPosition, 5.6);
     });
   }
