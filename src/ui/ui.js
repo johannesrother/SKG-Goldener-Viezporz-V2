@@ -60,7 +60,7 @@ export class GameUI {
           <p class="menu-atmosphere">Hauptmarkt · Trier · Klick zum Laufen · WASD · Mausrad zum Zoomen</p>
         </section>
         <section class="market-hud hidden" id="market-hud" aria-label="Trierer Altstadt Informationen">
-          <aside class="market-card"><p class="eyebrow" id="location-kicker">Hauptbahnhof · Trier</p><h2>Freitag, 19:47</h2><div class="market-rule"></div><p><span class="status-dot"></span><span id="zone-mood">Ankommen · Züge in der Ferne</span></p><div class="quest-brief"><span>✦ <b id="quest-title">EIN FREITAGABEND IN TRIER</b><em id="quest-count">ANKOMMEN</em></span><p id="quest-objective">Komm entspannt am Hauptmarkt an.</p></div></aside>
+          <aside class="market-card"><p class="eyebrow" id="location-kicker">Hauptbahnhof · Trier</p><h2 id="story-clock">Freitag, 19:30</h2><div class="market-rule"></div><p><span class="status-dot"></span><span id="zone-mood">Ankommen · Züge in der Ferne</span></p><div class="quest-brief"><span>✦ <b id="quest-title">EIN FREITAGABEND IN TRIER</b><em id="quest-count">ANKOMMEN</em></span><p id="quest-objective">Komm entspannt am Hauptmarkt an.</p></div></aside>
           <div class="market-location" id="location-name">HAUPTBAHNHOF · TRIER</div>
           <div class="market-visitor" id="visitor-count"><b>43</b><span>Menschen auf dem Platz</span></div>
           <button class="route-mini" id="open-map" aria-label="Stadtkarte öffnen"><b>PORTA</b><i></i><b>SIMEON</b><i></i><b>MARKT</b><i></i><b>DOM</b><em id="map-player">●</em></button>
@@ -71,7 +71,7 @@ export class GameUI {
         </section>
         <section class="dialogue-layer hidden" id="dialogue-layer" aria-live="polite"></section>
         <div class="memory-toast hidden" id="memory-toast" role="status"></div>
-        <section class="demo-finale hidden" id="demo-finale" aria-live="assertive"><div><p class="eyebrow">Kapitel 1 abgeschlossen</p><h2>Ein Freitagabend in Trier</h2><p>Freigeschaltete Erinnerungen</p><ul><li>Willkommen in Trier</li><li>Der erste SKG</li><li>Freunde fürs Leben</li><li>Ein Sommerabend</li><li>Die Legende vom Goldenen Viezporz</li></ul><strong>FORTSETZUNG FOLGT</strong><button id="return-to-menu" type="button">Zum Hauptmenü</button></div></section>
+        <section class="demo-finale hidden" id="demo-finale" aria-live="assertive"><div><p class="eyebrow">Kapitel 1 abgeschlossen</p><h2>Ein Freitagabend in Trier</h2><p>Freigeschaltete Erinnerungen</p><ul id="finale-memories"></ul><blockquote>„Manche Geschichten beginnen mit einem Schatz.“<br>„Unsere begann mit einem gewöhnlichen Freitagabend.“</blockquote><strong>FORTSETZUNG FOLGT</strong><div class="finale-actions"><button id="view-memories" type="button">Erinnerungen ansehen</button><button id="free-explore" type="button">Demo frei erkunden</button><button id="restart-demo" type="button">Demo neu starten</button><button id="return-to-menu" type="button">Hauptmenü</button></div></div></section>
         <section class="city-map hidden" id="city-map" aria-label="Stadtkarte Trier">
           <div class="city-map-card">
             <button class="close-city-map" id="close-map" aria-label="Karte schließen">×</button>
@@ -117,6 +117,7 @@ export class GameUI {
       closeMap: this.app.querySelector('#close-map'),
       locationName: this.app.querySelector('#location-name'),
       locationKicker: this.app.querySelector('#location-kicker'),
+      storyClock: this.app.querySelector('#story-clock'),
       zoneMood: this.app.querySelector('#zone-mood'),
       mapPlayer: this.app.querySelector('#map-player'),
       mapQuestTarget: this.app.querySelector('#map-quest-target'),
@@ -131,6 +132,10 @@ export class GameUI {
       dialogue: this.app.querySelector('#dialogue-layer'),
       memoryToast: this.app.querySelector('#memory-toast'),
       finale: this.app.querySelector('#demo-finale'),
+      finaleMemories: this.app.querySelector('#finale-memories'),
+      viewMemories: this.app.querySelector('#view-memories'),
+      freeExplore: this.app.querySelector('#free-explore'),
+      restartDemo: this.app.querySelector('#restart-demo'),
       returnToMenu: this.app.querySelector('#return-to-menu'),
     };
   }
@@ -158,6 +163,9 @@ export class GameUI {
     this.elements.closeMap.addEventListener('click', () => this.toggleMap(false));
     this.elements.interact.addEventListener('click', () => this.callbacks.onInteract?.());
     this.elements.mobileInteract.addEventListener('click', () => this.callbacks.onInteract?.());
+    this.elements.viewMemories.addEventListener('click', () => this.elements.finaleMemories.classList.toggle('is-expanded'));
+    this.elements.freeExplore.addEventListener('click', () => this.callbacks.onFreeExplore?.());
+    this.elements.restartDemo.addEventListener('click', () => this.callbacks.onRestartDemo?.());
     this.elements.returnToMenu.addEventListener('click', () => this.callbacks.onReturnToMenu?.());
     window.addEventListener('keydown', (event) => {
       if (event.code === 'KeyM') this.toggleMap();
@@ -210,10 +218,12 @@ export class GameUI {
   }
 
   begin(profile, visitors, showHud = true) {
+    this.memories = new Set();
     this.elements.start.classList.add('hidden');
     this.elements.hud.classList.toggle('hidden', !showHud);
     this.elements.playerName.textContent = profile.name;
     this.elements.avatar.textContent = profile.name.slice(0, 1).toUpperCase();
+    this.setStoryTime('Freitag, 19:30');
     this.updateMarket(visitors, { name: 'Hauptbahnhof Trier', zone: 'hauptbahnhof' });
   }
 
@@ -234,6 +244,10 @@ export class GameUI {
     const [x, y] = mapPositions[location.zone] || mapPositions.hauptmarkt;
     this.app.querySelector('#map-player-large').setAttribute('cx', x);
     this.app.querySelector('#map-player-large').setAttribute('cy', y);
+  }
+
+  setStoryTime(clock) {
+    if (clock) this.elements.storyClock.textContent = clock;
   }
 
   setQuest({ title, objective, count, targetId = null }) {
@@ -294,6 +308,24 @@ export class GameUI {
     renderLine();
   }
 
+  showChat(chat, onFinished) {
+    const messages = chat?.messages || [];
+    this.elements.dialogue.innerHTML = `<article class="dialogue-card group-chat-card"><div class="group-chat-heading"><span>GRUPPENCHAT</span><b>${this.escape(chat?.title || 'SKG')}</b></div><div class="group-chat-messages">${messages.map((message) => `<p><b>${this.escape(message.speaker)}</b>${this.escape(message.text)}</p>`).join('')}</div><button class="dialogue-next" type="button">Weiter <span>→</span></button></article>`;
+    this.elements.dialogue.querySelector('button').addEventListener('click', () => {
+      this.elements.dialogue.classList.add('hidden');
+      this.elements.dialogue.innerHTML = '';
+      onFinished?.();
+    });
+    this.elements.dialogue.classList.remove('hidden');
+  }
+
+  showTutorial(text) {
+    window.clearTimeout(this.tutorialTimer);
+    this.elements.memoryToast.textContent = `Tipp: ${text}`;
+    this.elements.memoryToast.classList.remove('hidden');
+    this.tutorialTimer = window.setTimeout(() => this.elements.memoryToast.classList.add('hidden'), 5200);
+  }
+
   showChoice({ speaker, text, choices = [] }, onChosen) {
     this.elements.dialogue.innerHTML = `<article class="dialogue-card dialogue-choice-card"><div class="dialogue-portrait"><i>${this.escape(String(speaker || '?').slice(0, 1))}</i></div><div class="dialogue-copy"><b>${this.escape(speaker || '')}</b><p>${this.escape(text || '')}</p><div class="dialogue-choice-list">${choices.map((choice) => `<button class="dialogue-choice" type="button" data-choice="${this.escape(choice.id)}">${this.escape(choice.label)}</button>`).join('')}</div></div></article>`;
     this.elements.dialogue.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => {
@@ -305,14 +337,23 @@ export class GameUI {
   }
 
   showMemory(label) {
+    this.memories ||= new Set();
+    this.memories.add(label);
     window.clearTimeout(this.memoryTimer);
     this.elements.memoryToast.textContent = `Erinnerung: ${label}`;
     this.elements.memoryToast.classList.remove('hidden');
     this.memoryTimer = window.setTimeout(() => this.elements.memoryToast.classList.add('hidden'), 3800);
   }
 
-  showEnding() {
+  showEnding({ memories = [] } = {}) {
+    const complete = [...new Set(memories.length ? memories : this.memories || [])];
+    this.elements.finaleMemories.innerHTML = complete.map((memory) => `<li>${this.escape(memory)}</li>`).join('');
+    this.elements.finaleMemories.classList.remove('is-expanded');
     this.elements.finale.classList.remove('hidden');
+  }
+
+  hideEnding() {
+    this.elements.finale.classList.add('hidden');
   }
 
   returnToMenu(saved) {
