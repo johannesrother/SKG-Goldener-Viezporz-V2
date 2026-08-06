@@ -1,4 +1,5 @@
 const SAVE_KEY = 'skg-goldener-viezporz-v1';
+const CHAPTER_ONE_KEY = 'skg-chapter-one-progress-v2';
 
 export function createFreshSave(profile) {
   return {
@@ -36,4 +37,52 @@ export function persist(save) {
 
 export function clearSave() {
   localStorage.removeItem(SAVE_KEY);
+}
+
+// The story has a deliberately small, standalone save payload. It is kept
+// separate from the character profile so new chapters can add their own
+// progress without invalidating a player's appearance or settings.
+export function createChapterOneProgress() {
+  return {
+    version: 2,
+    started: false,
+    completed: false,
+    mode: 'arrival',
+    stageIndex: 0,
+    recruited: [],
+    memories: [],
+    optionalEvents: [],
+    hints: [],
+    drink: null,
+    moment: 'arrival',
+  };
+}
+
+export function loadChapterOneProgress() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CHAPTER_ONE_KEY) || 'null');
+    if (!value || value.version !== 2) return createChapterOneProgress();
+    return {
+      ...createChapterOneProgress(),
+      ...value,
+      recruited: Array.isArray(value.recruited) ? value.recruited : [],
+      memories: Array.isArray(value.memories) ? value.memories : [],
+      optionalEvents: Array.isArray(value.optionalEvents) ? value.optionalEvents : [],
+      hints: Array.isArray(value.hints) ? value.hints : [],
+    };
+  } catch {
+    return createChapterOneProgress();
+  }
+}
+
+export function persistChapterOneProgress(progress) {
+  localStorage.setItem(CHAPTER_ONE_KEY, JSON.stringify({
+    ...createChapterOneProgress(),
+    ...progress,
+    version: 2,
+  }));
+}
+
+export function clearChapterOneProgress() {
+  localStorage.removeItem(CHAPTER_ONE_KEY);
 }
