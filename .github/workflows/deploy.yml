@@ -10,12 +10,6 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  # Several quick content updates must not cancel the most recent Pages build
-  # before it has received a hosted runner.
-  cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
