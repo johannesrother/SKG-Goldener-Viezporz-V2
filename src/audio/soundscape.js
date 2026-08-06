@@ -106,13 +106,15 @@ export class Soundscape {
     if (!this.context || !this.master || !zone || zone === this.zone) return;
     this.zone = zone;
     const now = this.context.currentTime;
-    const target = this.volume * (zone === 'domfreihof' || zone === 'kornmarkt' ? .085 : zone === 'porta' ? .115 : zone === 'simeonstrasse' || zone === 'sternstrasse' || zone === 'brotstrasse' || zone === 'fleischstrasse' ? .105 : .12);
+    const target = this.volume * (zone === 'domfreihof' || zone === 'kornmarkt' ? .085 : zone === 'porta' ? .115 : zone === 'simeonstrasse' || zone === 'christophstrasse' || zone === 'margaretengaesschen' || zone === 'sternstrasse' || zone === 'brotstrasse' || zone === 'fleischstrasse' ? .105 : .12);
     this.master.gain.cancelScheduledValues(now);
     this.master.gain.setValueAtTime(this.master.gain.value, now);
     this.master.gain.linearRampToValueAtTime(target, now + .65);
     const profile = {
       hauptmarkt: { hum: 98, humFilter: 440, humGain: .018, ambienceFilter: 760, ambienceGain: .037, pan: -.06 },
       simeonstrasse: { hum: 94, humFilter: 520, humGain: .015, ambienceFilter: 650, ambienceGain: .03, pan: .13 },
+      christophstrasse: { hum: 91, humFilter: 500, humGain: .014, ambienceFilter: 600, ambienceGain: .027, pan: .18 },
+      margaretengaesschen: { hum: 87, humFilter: 440, humGain: .011, ambienceFilter: 500, ambienceGain: .022, pan: -.18 },
       sternstrasse: { hum: 88, humFilter: 430, humGain: .012, ambienceFilter: 530, ambienceGain: .024, pan: .18 },
       domfreihof: { hum: 78, humFilter: 350, humGain: .009, ambienceFilter: 390, ambienceGain: .016, pan: -.22 },
       brotstrasse: { hum: 92, humFilter: 500, humGain: .014, ambienceFilter: 600, ambienceGain: .028, pan: -.13 },
