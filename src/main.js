@@ -12,6 +12,7 @@ class HauptmarktSlice {
     this.engine = null;
     this.menuEngine = null;
     this.quest = null;
+    this.chapterResult = null;
     this.audio = new Soundscape(.4);
     this.lastUiUpdate = 0;
     this.ui = new GameUI(app, {
@@ -22,6 +23,8 @@ class HauptmarktSlice {
       onJoystick: (x, y) => this.engine?.setJoystick(x, y),
       onInteract: () => this.quest?.interact(this.engine?.getPosition()),
       onReturnToMenu: () => this.returnToMenu(),
+      onFreeExplore: () => this.freeExplore(),
+      onRestartDemo: () => this.restartDemo(),
     });
     this.ui.showStart(this.readProfile());
     this.startMenuScene(this.ui.profile);
@@ -65,8 +68,11 @@ class HauptmarktSlice {
       this.engine = new GameEngine(this.ui.elements.canvas, profile, {
         onFrame: (frame) => this.onFrame(frame),
         onInteract: (position) => this.quest?.interact(position),
-        onIntroEnd: () => this.ui.revealHud(),
-        onCinematicEnd: () => this.ui.showEnding(),
+        onIntroEnd: () => {
+          this.ui.revealHud();
+          this.quest?.begin(this.engine?.clock.elapsedTime || 0);
+        },
+        onCinematicEnd: () => this.ui.showEnding(this.chapterResult),
       });
       this.ui.begin(profile, this.engine.world.visitorCount, true);
       this.quest = new CityStrollQuest({
@@ -76,15 +82,18 @@ class HauptmarktSlice {
           onQuestChange: (quest) => this.ui.setQuest(quest),
           onPrompt: (label) => this.ui.showInteraction(label),
           onDialogue: (lines, done) => this.ui.showDialogue(lines, done),
+          onChat: (chat, done) => this.ui.showChat(chat, done),
           onChoice: (choice, done) => this.ui.showChoice(choice, done),
           onMemory: (memory) => this.ui.showMemory(memory),
+          onTutorial: (text) => this.ui.showTutorial(text),
+          onTimeOfDay: (clock) => this.ui.setStoryTime(clock),
           onProgress: (finale) => this.audio.progress(finale),
           onWineMoment: () => this.engine?.beginWineMoment(this.engine.world.wineStandPoint),
           onWineMomentEnd: () => this.engine?.endWineMoment(),
           onCinematic: (target, duration) => this.engine?.beginCinematic(target, duration),
+          onChapterComplete: (result) => { this.chapterResult = result; },
         },
       });
-      this.quest.begin();
       this.engine.beginStationIntro();
     } catch (error) {
       this.ui.showWebGLError(error);
@@ -104,9 +113,22 @@ class HauptmarktSlice {
     this.engine?.destroy();
     this.engine = null;
     this.quest = null;
+    this.chapterResult = null;
     this.lastUiUpdate = 0;
     this.ui.returnToMenu(this.readProfile());
     this.startMenuScene(this.ui.profile);
+  }
+
+  freeExplore() {
+    this.ui.hideEnding();
+    this.engine?.resumeExploration();
+  }
+
+  restartDemo() {
+    this.quest?.reset();
+    const profile = { ...this.ui.profile };
+    this.ui.hideEnding();
+    this.start(profile);
   }
 }
 
