@@ -223,14 +223,14 @@ export class GameUI {
 
   updateMarket(visitors, location = { name: 'Hauptmarkt', zone: 'hauptmarkt' }) {
     this.elements.visitors.innerHTML = `<b>${visitors}</b><span>Menschen auf dem Platz</span>`;
-    const names = { porta: 'PORTA NIGRA · TRIER', simeonstrasse: 'SIMEONSTRASSE · TRIER', hauptmarkt: 'HAUPTMARKT · TRIER', sternstrasse: 'STERNSTRASSE · TRIER', domfreihof: 'DOMFREIHOF · TRIER', brotstrasse: 'BROTSTRASSE · TRIER', fleischstrasse: 'FLEISCHSTRASSE · TRIER', kornmarkt: 'KORNMARKT · TRIER' };
-    const moods = { porta: 'Warme Sonne · Ankommen in Trier', simeonstrasse: 'Einkaufsstraße · Stadt im Abendlicht', hauptmarkt: 'Golden Hour · lebendiger Abend', sternstrasse: 'Warme Gasse · Blick zum Dom', domfreihof: 'Offener Himmel · Domglocken', brotstrasse: 'Ladenfronten · warmer Feierabend', fleischstrasse: 'Altstadtgasse · Stimmen und Viez', kornmarkt: 'Weiter Platz · Brunnen und Abendlicht' };
-    const progress = { porta: '6%', simeonstrasse: '25%', hauptmarkt: '51%', sternstrasse: '71%', domfreihof: '91%', brotstrasse: '42%', fleischstrasse: '63%', kornmarkt: '55%' };
+    const names = { porta: 'PORTA NIGRA · TRIER', simeonstrasse: 'SIMEONSTRASSE · TRIER', christophstrasse: 'CHRISTOPHSTRASSE · TRIER', margaretengaesschen: 'MARGARETENGÄSSCHEN · TRIER', hauptmarkt: 'HAUPTMARKT · TRIER', sternstrasse: 'STERNSTRASSE · TRIER', domfreihof: 'DOMFREIHOF · TRIER', brotstrasse: 'BROTSTRASSE · TRIER', fleischstrasse: 'FLEISCHSTRASSE · TRIER', kornmarkt: 'KORNMARKT · TRIER', hauptbahnhof: 'HAUPTBAHNHOF · TRIER' };
+    const moods = { porta: 'Warme Sonne · Ankommen in Trier', simeonstrasse: 'Einkaufsstraße · Stadt im Abendlicht', christophstrasse: 'Stadtgasse · Cafés und Läden', margaretengaesschen: 'Richtung Bahnhof · Feierabend in Trier', hauptmarkt: 'Golden Hour · lebendiger Abend', sternstrasse: 'Warme Gasse · Blick zum Dom', domfreihof: 'Offener Himmel · Domglocken', brotstrasse: 'Ladenfronten · warmer Feierabend', fleischstrasse: 'Altstadtgasse · Stimmen und Viez', kornmarkt: 'Weiter Platz · Brunnen und Abendlicht', hauptbahnhof: 'Ankommen · Züge in der Ferne' };
+    const progress = { porta: '6%', simeonstrasse: '25%', christophstrasse: '16%', margaretengaesschen: '4%', hauptmarkt: '51%', sternstrasse: '71%', domfreihof: '91%', brotstrasse: '42%', fleischstrasse: '63%', kornmarkt: '55%', hauptbahnhof: '1%' };
     this.elements.locationName.textContent = names[location.zone] || names.hauptmarkt;
     this.elements.locationKicker.textContent = `${location.name || 'Hauptmarkt'} · Trier`;
     this.elements.zoneMood.textContent = moods[location.zone] || moods.hauptmarkt;
     this.elements.mapPlayer.style.left = progress[location.zone] || progress.hauptmarkt;
-    const mapPositions = { porta: ['210', '96'], simeonstrasse: ['210', '232'], hauptmarkt: ['210', '365'], sternstrasse: ['116', '365'], domfreihof: ['92', '309'], brotstrasse: ['142', '443'], fleischstrasse: ['278', '443'], kornmarkt: ['210', '470'] };
+    const mapPositions = { porta: ['210', '96'], simeonstrasse: ['210', '232'], christophstrasse: ['302', '145'], margaretengaesschen: ['116', '112'], hauptmarkt: ['210', '365'], sternstrasse: ['116', '365'], domfreihof: ['92', '309'], brotstrasse: ['142', '443'], fleischstrasse: ['278', '443'], kornmarkt: ['210', '470'], hauptbahnhof: ['58', '106'] };
     const [x, y] = mapPositions[location.zone] || mapPositions.hauptmarkt;
     this.app.querySelector('#map-player-large').setAttribute('cx', x);
     this.app.querySelector('#map-player-large').setAttribute('cy', y);
