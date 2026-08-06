@@ -27,6 +27,13 @@ const HAIR = {
   hell: 0xba8641,
 };
 
+// A relaxed evening stroll should still feel immediately responsive.  Keeping
+// these values together makes the pace easy to tune without changing the
+// camera or collision behaviour.
+const WALK_SPEED = 5.35;
+const WALK_ACCELERATION = 15;
+const WALK_DECELERATION = 11;
+
 export class GameEngine {
   constructor(canvas, profile, callbacks = {}) {
     this.canvas = canvas;
@@ -272,14 +279,14 @@ export class GameEngine {
     const input = keyboard.lengthSq() > 0 ? keyboard : joystick;
     let targetVelocity = new THREE.Vector3();
     if (this.inputEnabled && input.lengthSq() > .005) {
-      targetVelocity = this.cameraRelativeMovement(input, 4.8);
+      targetVelocity = this.cameraRelativeMovement(input, WALK_SPEED);
     } else if (this.inputEnabled && this.destination) {
       const distance = this.destination.clone().sub(this.player.position);
       distance.y = 0;
       if (distance.length() < .1) this.destination = null;
-      else targetVelocity = distance.normalize().multiplyScalar(Math.min(4.8, Math.max(.7, distance.length() * 4.4)));
+      else targetVelocity = distance.normalize().multiplyScalar(Math.min(WALK_SPEED, Math.max(.78, distance.length() * 4.8)));
     }
-    const responsiveness = targetVelocity.lengthSq() > 0 ? 13 : 10;
+    const responsiveness = targetVelocity.lengthSq() > 0 ? WALK_ACCELERATION : WALK_DECELERATION;
     this.playerVelocity.lerp(targetVelocity, 1 - Math.exp(-delta * responsiveness));
     if (!this.inputEnabled) this.playerVelocity.multiplyScalar(Math.exp(-delta * 14));
     if (this.playerVelocity.lengthSq() < .00006) this.playerVelocity.set(0, 0, 0);
@@ -389,7 +396,10 @@ export class GameEngine {
   animate() {
     if (!this.running) return;
     requestAnimationFrame(() => this.animate());
-    const delta = Math.min(this.clock.getDelta(), .05);
+    // Do not let a short rendering hiccup make walking visibly slower.  The
+    // clamp still prevents a tab returning from the background from causing a
+    // large collision step.
+    const delta = Math.min(this.clock.getDelta(), .06);
     const time = this.clock.elapsedTime;
     this.updatePlayer(delta, time);
     this.updateCamera(delta);
