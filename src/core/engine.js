@@ -82,7 +82,9 @@ export class GameEngine {
       hair: HAIR[profile.hair] || HAIR.braun,
       scale: 1.08,
     });
-    this.player.position.set(1.8, 0, 7.4);
+    // Chapter 1 starts with arriving in Trier. The station square is an
+    // existing, safely walkable part of the same continuous world.
+    this.player.position.copy(this.world.arrivalPoint || new THREE.Vector3(-72, 0, 90));
     this.world.root.add(this.player);
     this.resize();
     this.bindInput();
@@ -164,12 +166,35 @@ export class GameEngine {
     this.cameraFocus.copy(this.marketIntro.fromFocus);
   }
 
+  beginStationIntro(duration = 4.4) {
+    this.destination = null;
+    this.keys.clear();
+    this.joystick.set(0, 0);
+    this.inputEnabled = false;
+    const arrival = this.player.position.clone();
+    this.marketIntro = {
+      startedAt: this.clock.elapsedTime,
+      duration,
+      fromPosition: new THREE.Vector3(arrival.x + 17, 25, arrival.z + 21),
+      toPosition: new THREE.Vector3(arrival.x + 10.8, 17.2, arrival.z + 17.4),
+      fromFocus: new THREE.Vector3(arrival.x + 3.6, 0, arrival.z),
+      toFocus: arrival,
+    };
+    this.camera.position.copy(this.marketIntro.fromPosition);
+    this.cameraFocus.copy(this.marketIntro.fromFocus);
+  }
+
   beginWineMoment(target) {
     this.destination = null;
     this.keys.clear();
     this.joystick.set(0, 0);
     this.inputEnabled = false;
     this.wineMoment = { target: new THREE.Vector3(target.x, 0, target.z) };
+  }
+
+  endWineMoment() {
+    this.wineMoment = null;
+    this.inputEnabled = true;
   }
 
   setMenuPresentation(active = true) {
