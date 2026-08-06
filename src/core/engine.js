@@ -197,6 +197,13 @@ export class GameEngine {
     this.inputEnabled = true;
   }
 
+  resumeExploration() {
+    this.cinematic = null;
+    this.wineMoment = null;
+    this.marketIntro = null;
+    this.inputEnabled = true;
+  }
+
   setMenuPresentation(active = true) {
     this.menuPresentation = active;
     this.inputEnabled = !active;
@@ -364,6 +371,7 @@ export class GameEngine {
       this.camera.lookAt(this.cameraFocus.x, .45, this.cameraFocus.z);
       if (this.clock.elapsedTime >= this.cinematic.endsAt) {
         this.cinematic = null;
+        this.inputEnabled = true;
         this.callbacks.onCinematicEnd?.();
       }
       return;
