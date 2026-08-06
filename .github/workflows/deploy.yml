@@ -12,7 +12,9 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Several quick content updates must not cancel the most recent Pages build
+  # before it has received a hosted runner.
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -22,6 +24,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - run: npm install
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
