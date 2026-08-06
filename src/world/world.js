@@ -2194,6 +2194,15 @@ function createQuestFriend(root, { id, name, spot, x, z, outfit, scale, seed, dr
   });
   friend.position.set(x, 0, z);
   friend.rotation.y = Math.PI;
+  // Weber's inherited Porz is intentionally humble: it only becomes visible
+  // during the wine-stand story, so the later second Porz still feels earned.
+  const heirloomPorz = id === 'weber' ? createOldViezporz() : null;
+  if (heirloomPorz) {
+    heirloomPorz.position.set(.22 * scale, 1.08 * scale, .27 * scale);
+    heirloomPorz.rotation.y = -.48;
+    heirloomPorz.visible = false;
+    friend.add(heirloomPorz);
+  }
   const nameplate = addLabel(friend, `${name} · ${spot}`, 0, 2.56 * scale, 0, .58, '#f3cb70');
   nameplate.visible = false;
   const marker = new THREE.Mesh(
@@ -2212,10 +2221,28 @@ function createQuestFriend(root, { id, name, spot, x, z, outfit, scale, seed, dr
   beacon.visible = false;
   friend.add(beacon);
   friend.userData.questFriend = {
-    id, name, home: new THREE.Vector3(x, 0, z), recruited: false, settled: false, nameplate, marker, beacon, scale, seat: null,
+    id, name, home: new THREE.Vector3(x, 0, z), recruited: false, settled: false, nameplate, marker, beacon, scale, seat: null, heirloomPorz,
   };
   root.add(friend);
   return friend;
+}
+
+function createOldViezporz() {
+  const porz = new THREE.Group();
+  const porcelain = material(0xd0bea1, { roughness: .64, metalness: .03, emissive: 0x4d321c, emissiveIntensity: .1 });
+  const paintedRim = material(0x6c6658, { roughness: .58, metalness: .06 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.095, .11, .23, 12), porcelain);
+  body.position.y = .115;
+  porz.add(body);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.095, .012, 6, 12), paintedRim);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = .23;
+  porz.add(rim);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(.06, .012, 6, 10), paintedRim);
+  handle.rotation.y = Math.PI / 2;
+  handle.position.set(.105, .13, 0);
+  porz.add(handle);
+  return porz;
 }
 
 function createQuestFriends(root) {
@@ -2739,10 +2766,13 @@ export function createWorld(scene, quality = 'medium') {
   const arrivalPoint = new THREE.Vector3(-72.0, 0, 90.0);
 
   const warmSky = new THREE.Color(0xc79061);
+  const nightSky = new THREE.Color(0x1c2940);
   scene.background = warmSky;
   scene.fog = new THREE.Fog(0xc79061, 46, 142);
-  scene.add(new THREE.HemisphereLight(0xf7d7ad, 0x455d52, 1.62));
-  scene.add(new THREE.AmbientLight(0xffd1a0, .36));
+  const hemisphere = new THREE.HemisphereLight(0xf7d7ad, 0x455d52, 1.62);
+  const ambient = new THREE.AmbientLight(0xffd1a0, .36);
+  scene.add(hemisphere);
+  scene.add(ambient);
   const sun = new THREE.DirectionalLight(0xffb064, 3.22);
   sun.position.set(-28, 30, 14);
   sun.castShadow = true;
@@ -2783,6 +2813,46 @@ export function createWorld(scene, quality = 'medium') {
       cameraOccluders.push({ shapes, materials, fade: 0 });
     }
   });
+
+  // Evening is controlled by the story rather than a real-time clock. This
+  // keeps the Golden-Hour-to-night transition readable in a 30–45 minute
+  // playthrough without punishing anyone who pauses to explore.
+  const eveningPointLights = [];
+  const eveningEmissives = new Map();
+  root.traverse((object) => {
+    if (object.isPointLight && object !== goldenLight.light) {
+      eveningPointLights.push({ light: object, base: object.intensity });
+    }
+    if (!object.isMesh || !object.material) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    materials.forEach((meshMaterial) => {
+      if (meshMaterial.emissive && meshMaterial.emissiveIntensity > .16 && !eveningEmissives.has(meshMaterial)) {
+        eveningEmissives.set(meshMaterial, meshMaterial.emissiveIntensity);
+      }
+    });
+  });
+  let eveningTarget = 0;
+  let eveningProgress = 0;
+
+  function applyEvening(progress) {
+    scene.background.copy(warmSky).lerp(nightSky, progress);
+    scene.fog.color.copy(scene.background);
+    scene.fog.near = THREE.MathUtils.lerp(46, 34, progress);
+    scene.fog.far = THREE.MathUtils.lerp(142, 110, progress);
+    sun.intensity = THREE.MathUtils.lerp(3.22, .34, progress);
+    sun.position.y = THREE.MathUtils.lerp(30, 10, progress);
+    hemisphere.intensity = THREE.MathUtils.lerp(1.62, .74, progress);
+    ambient.intensity = THREE.MathUtils.lerp(.36, .68, progress);
+    fill.intensity = THREE.MathUtils.lerp(.26, .5, progress);
+    warmBounce.intensity = THREE.MathUtils.lerp(.18, .06, progress);
+    eveningPointLights.forEach(({ light, base }) => { light.intensity = base * THREE.MathUtils.lerp(.72, 1.78, progress); });
+    eveningEmissives.forEach((base, meshMaterial) => { meshMaterial.emissiveIntensity = base + progress * .44; });
+  }
+
+  function updateEvening(delta) {
+    eveningProgress += (eveningTarget - eveningProgress) * (1 - Math.exp(-delta * 1.2));
+    applyEvening(eveningProgress);
+  }
 
   function dynamicColliders(position) {
     const people = [...citizens, ...Object.values(questFriends)];
@@ -2889,6 +2959,7 @@ export function createWorld(scene, quality = 'medium') {
   function update(time, playerPosition = new THREE.Vector3(), playerFacing = null) {
     const delta = Math.min(Math.max(time - lastUpdateTime, 0), .05);
     lastUpdateTime = time;
+    updateEvening(delta);
     const walkers = [];
     citizens.forEach((citizen, index) => {
       const { mode, phase, route, home } = citizen.userData;
@@ -3070,6 +3141,13 @@ export function createWorld(scene, quality = 'medium') {
         quest.settled = false;
         quest.seat = null;
       });
+    },
+    revealWebersPorz() {
+      const porz = questFriends.weber?.userData.questFriend.heirloomPorz;
+      if (porz) porz.visible = true;
+    },
+    setEveningProgress(value = 0) {
+      eveningTarget = THREE.MathUtils.clamp(value, 0, 1);
     },
     revealGoldenLight() { goldenLight.group.visible = true; },
     staticColliderCount: staticColliders.length,
