@@ -2886,7 +2886,7 @@ export function createWorld(scene, quality = 'medium') {
     if (object.userData.flagWind) windFlags.push(object);
   });
 
-  function update(time, playerPosition = new THREE.Vector3()) {
+  function update(time, playerPosition = new THREE.Vector3(), playerFacing = null) {
     const delta = Math.min(Math.max(time - lastUpdateTime, 0), .05);
     lastUpdateTime = time;
     const walkers = [];
@@ -2956,9 +2956,19 @@ export function createWorld(scene, quality = 'medium') {
         animateCharacterPose(friend, time, false);
       } else if (quest.recruited) {
         const column = recruitedFriends.indexOf(friend);
-        const offsets = [[-1.15, .8], [1.15, .8], [-1.55, -.35], [1.55, -.35], [0, 1.55]];
-        const [offsetX, offsetZ] = offsets[column % offsets.length];
-        const desired = new THREE.Vector3(playerPosition.x + offsetX, 0, playerPosition.z + offsetZ);
+        // The player always leads the walk. Each companion takes a loose
+        // place behind the current movement direction, never in front.
+        const formation = [[-.78, 1.15], [.78, 1.15], [-1.2, 2.1], [1.2, 2.1], [0, 3.0]];
+        const [side, behind] = formation[column % formation.length];
+        const facing = playerFacing?.clone?.() || new THREE.Vector3(0, 0, 1);
+        facing.y = 0;
+        if (facing.lengthSq() < .001) facing.set(0, 0, 1);
+        facing.normalize();
+        const right = new THREE.Vector3(facing.z, 0, -facing.x);
+        const desired = new THREE.Vector3()
+          .copy(playerPosition)
+          .addScaledVector(facing, -behind)
+          .addScaledVector(right, side);
         const dx = desired.x - friend.position.x;
         const dz = desired.z - friend.position.z;
         const moving = dx * dx + dz * dz > .018;
