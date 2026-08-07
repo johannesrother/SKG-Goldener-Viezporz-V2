@@ -239,8 +239,10 @@ export class CityStrollQuest {
         return { type: 'return', quest };
       }
       if (state === 'active' && quest.id !== 'lost-plectrum' && this.isNear(quest.target, position, 1.45)) {
-        const followerReady = this.world.isSideQuestFollowerNearby?.(quest.id, quest.target) ?? true;
-        if (followerReady) return { type: 'target', quest };
+        // The companion may be a step behind the player due to collision
+        // avoidance. Reaching the marked place is enough to finish the small
+        // encounter; the world then settles the companion at the destination.
+        return { type: 'target', quest };
       }
     }
     return null;
@@ -278,6 +280,13 @@ export class CityStrollQuest {
               ? 'Den Aussichtspunkt erreichen'
               : 'Touristen zum Domfreihof begleiten'
             : null;
+    // These two accompanying encounters should feel like a natural arrival,
+    // not like a second button press after the player has already guided the
+    // person to the clearly marked location.
+    if (sideQuestInteraction?.type === 'target') {
+      this.completeSideQuest(sideQuestInteraction.quest);
+      return;
+    }
     if (this.mode === 'routeToMarket' || this.mode === 'explore') {
       const stage = this.stage;
       const friend = this.world.questFriends[stage.id];
