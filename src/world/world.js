@@ -3459,12 +3459,14 @@ export function createWorld(scene, quality = 'medium') {
       }
       applyCitizenActivity(person, time);
       const isAvailable = quest.state === 'available' || quest.state === 'discovered';
-      const nearby = person.position.distanceToSquared(playerPosition) < 26 * 26;
       quest.marker.visible = isAvailable;
       quest.marker.position.y = 3.16 * quest.scale + Math.sin(time * 2.2 + index) * .07;
       const iconPulse = 1 + Math.sin(time * 3.1 + index) * .09;
       quest.marker.scale.set(1.05 * quest.scale * iconPulse, 1.05 * quest.scale * iconPulse, 1);
-      quest.label.visible = isAvailable && nearby;
+      // A side quest is an invitation in the city, not a hidden proximity
+      // trigger. Keep its nameplate together with the exclamation mark so it
+      // stays recognisable at the Porta, on the Hauptmarkt and at the Dom.
+      quest.label.visible = isAvailable;
       quest.homeMarker.visible = isAvailable;
       if (isAvailable) {
         const homePulse = 1 + Math.sin(time * 2.7 + index) * .06;
