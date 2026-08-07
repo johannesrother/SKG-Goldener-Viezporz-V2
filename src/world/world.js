@@ -2328,7 +2328,7 @@ function createSideQuestMarker(parent, scale = 1) {
   return marker;
 }
 
-function createSideQuestTarget(root, point, radius = .9) {
+function createSideQuestTarget(root, point, radius = .9, label = '') {
   const marker = new THREE.Group();
   marker.position.set(point.x, .026, point.z);
   const ring = new THREE.Mesh(
@@ -2344,6 +2344,30 @@ function createSideQuestTarget(root, point, radius = .9) {
   inner.rotation.x = -Math.PI / 2;
   inner.position.y = .008;
   marker.add(inner);
+  if (label) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 560;
+    canvas.height = 120;
+    const context = canvas.getContext('2d');
+    context.fillStyle = 'rgba(18, 29, 26, .9)';
+    context.roundRect(10, 10, 540, 100, 28);
+    context.fill();
+    context.strokeStyle = '#edc66f';
+    context.lineWidth = 4;
+    context.roundRect(10, 10, 540, 100, 28);
+    context.stroke();
+    context.fillStyle = '#f5e3bc';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.font = '700 37px Inter, Arial, sans-serif';
+    context.fillText(label, 280, 60);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const waypoint = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
+    waypoint.position.y = 1.45;
+    waypoint.scale.set(2.7, .58, 1);
+    marker.add(waypoint);
+  }
   marker.userData = { ring, inner, radius };
   marker.visible = false;
   root.add(marker);
@@ -2374,7 +2398,12 @@ function createSideQuestCharacters(root) {
     const marker = createSideQuestMarker(person, look.scale);
     const label = addSideQuestLabel(person, definition.shortTitle, look.scale);
     const homeMarker = createSideQuestTarget(root, definition.point, 1.1);
-    const targetMarker = createSideQuestTarget(root, definition.target, definition.id === 'lost-plectrum' ? 2.25 : 1.0);
+    const targetMarker = createSideQuestTarget(
+      root,
+      definition.target,
+      definition.id === 'lost-plectrum' ? 2.25 : definition.id === 'find-the-dom' ? 1.65 : 1.0,
+      definition.id === 'find-the-dom' ? 'DOMFREIHOF' : '',
+    );
     let plectrum = null;
     if (definition.id === 'lost-plectrum') {
       plectrum = new THREE.Group();
@@ -3263,7 +3292,8 @@ export function createWorld(scene, quality = 'medium') {
         quest.homeMarker.scale.setScalar(homePulse);
         quest.homeMarker.userData.inner.material.opacity = .67 + Math.sin(time * 3.4 + index) * .14;
       }
-      const targetVisible = quest.state === 'active';
+      const targetVisible = quest.state === 'active'
+        || (quest.state === 'discovered' && (quest.id === 'porta-photo' || quest.id === 'find-the-dom'));
       quest.targetMarker.visible = targetVisible;
       if (targetVisible) {
         const pulse = 1 + Math.sin(time * 2.4 + index) * .075;
