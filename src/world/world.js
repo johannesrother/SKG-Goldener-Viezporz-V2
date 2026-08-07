@@ -2397,6 +2397,7 @@ function createSideQuestCharacters(root) {
       home: new THREE.Vector3(definition.point.x, 0, definition.point.z),
       target: new THREE.Vector3(definition.target.x, 0, definition.target.z),
       state: 'available',
+      escorting: false,
       marker,
       label,
       homeMarker,
@@ -3219,7 +3220,8 @@ export function createWorld(scene, quality = 'medium') {
     });
     Object.values(sideQuestCharacters).forEach((person, index) => {
       const quest = person.userData.sideQuest;
-      const followsPlayer = quest.state === 'active' && (quest.id === 'porta-photo' || quest.id === 'find-the-dom');
+      const followsPlayer = quest.state === 'active' && quest.escorting
+        && (quest.id === 'porta-photo' || quest.id === 'find-the-dom');
       const settlesAtTarget = quest.state === 'completed' && (quest.id === 'porta-photo' || quest.id === 'find-the-dom');
       if (followsPlayer) {
         const facing = playerFacing?.clone?.() || new THREE.Vector3(0, 0, 1);
@@ -3325,10 +3327,11 @@ export function createWorld(scene, quality = 'medium') {
     update,
     get recruitedCount() { return recruitedFriends.length; },
     setQuestTarget(id) { activeQuestFriend = id; },
-    setSideQuestState(id, state = 'available') {
+    setSideQuestState(id, state = 'available', { escorting = false } = {}) {
       const person = sideQuestCharacters[id];
       if (!person) return;
       person.userData.sideQuest.state = state;
+      person.userData.sideQuest.escorting = Boolean(escorting);
     },
     getSideQuestState(id) {
       return sideQuestCharacters[id]?.userData.sideQuest.state || 'available';
