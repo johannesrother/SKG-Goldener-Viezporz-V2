@@ -151,8 +151,10 @@ export const SIDE_QUESTS = [
     title: 'DER BESTE BLICK AUF DIE PORTA',
     shortTitle: 'Der beste Blick auf die Porta',
     npc: 'Fotografin',
-    point: { x: -8.3, z: 60.2 },
-    target: { x: -5.8, z: 76.2 },
+    // Clear, central paving on the Porta forecourt: directly visible after
+    // reaching the monument and never hidden behind planters or benches.
+    point: { x: -8.15, z: 72.2 },
+    target: { x: -5.8, z: 80.0 },
     memory: 'Der beste Blick auf die Porta',
     objective: 'Führe die Fotografin zu einem guten Aussichtspunkt.',
     prompt: 'Optionale Nebenquest: Der beste Blick auf die Porta',
