@@ -70,7 +70,7 @@ export class GameUI {
             <p class="hud-location-name" id="location-name">Hauptbahnhof</p>
             <button class="compass-minimap" id="open-map" aria-label="Stadtkarte öffnen" type="button">
               <span class="minimap-world" id="minimap-world" aria-hidden="true">
-                <i class="minimap-water"></i><i class="minimap-road minimap-road-main"></i><i class="minimap-road minimap-road-east"></i><i class="minimap-road minimap-road-south"></i>
+                <i class="minimap-water"></i><i class="minimap-road minimap-road-main"></i><i class="minimap-road minimap-road-east"></i><i class="minimap-road minimap-road-south"></i><i class="minimap-road minimap-road-west"></i><i class="minimap-road minimap-road-northwest"></i>
                 <i class="minimap-place minimap-porta"></i><i class="minimap-place minimap-market"></i><i class="minimap-place minimap-dom"></i><i class="minimap-place minimap-korn"></i><i class="minimap-position"></i>
                 <i class="minimap-wine" title="Weinstand"></i><i class="minimap-marker main hidden" id="minimap-quest-marker">◆</i><i class="minimap-marker side hidden" id="minimap-side-marker">!</i>
               </span>
@@ -95,19 +95,19 @@ export class GameUI {
             <svg viewBox="0 0 620 520" role="img" aria-label="Spielkarte von Porta Nigra, Simeonstraße, Hauptmarkt, Sternstraße, Domfreihof, Brotstraße, Fleischstraße und Kornmarkt">
               <defs><linearGradient id="mapPaper" x1="0" x2="1"><stop stop-color="#21332f"/><stop offset="1" stop-color="#172622"/></linearGradient></defs>
               <rect x="8" y="8" width="604" height="504" rx="18" fill="url(#mapPaper)" stroke="#d6ab58" stroke-opacity=".55"/>
-              <path class="map-blocks" d="M115 92h168v82H115zM340 196h155v90H340zM78 334h104v118H78zM239 338h142v118H239zM440 330h112v125H440z"/>
-              <path class="map-road main" d="M210 72V323"/><path class="map-road main" d="M210 365H76"/><path class="map-road side" d="M210 403L278 443H232M210 403L142 443H188"/><path class="map-road side" d="M102 365V269"/>
-              <path class="map-road thin" d="M164 148H255M157 250H265M86 318H174M158 432H262"/>
-              <circle class="map-place porta" cx="210" cy="66" r="23"/><path class="map-arch" d="M193 74v-16c0-11 15-11 15 0v16m4 0v-16c0-11 15-11 15 0v16"/>
-              <circle class="map-place market" cx="210" cy="365" r="45"/><circle class="map-fountain" cx="210" cy="365" r="14"/><path class="map-place dom" d="M73 309v-36h38v36m-30-36v-19m22 19v-19"/><circle class="map-place korn" cx="210" cy="470" r="22"/>
-              <path class="map-route-line" d="M210 88V313M158 365H88M88 365l4-49M210 403L278 443H232M210 403L142 443H188"/>
-              <circle class="map-player-marker" id="map-player-large" cx="210" cy="96" r="9"/>
-              <text class="map-target-marker" id="map-quest-target" x="190" y="352">✦</text>
-              <text x="210" y="30" text-anchor="middle" class="map-north">N ↑</text>
-              <text x="244" y="71" class="map-label">PORTA NIGRA</text><text x="224" y="220" class="map-label">SIMEONSTRASSE</text>
-              <text x="210" y="420" text-anchor="middle" class="map-label">HAUPTMARKT</text><text x="88" y="351" class="map-label">STERNSTRASSE</text>
-              <text x="73" y="272" class="map-label">DOMFREIHOF</text><text x="306" y="416" class="map-small-label">JAKOBSTR.</text>
-              <text x="76" y="470" class="map-small-label">BROTSTR.</text><text x="245" y="470" class="map-small-label">FLEISCHSTR.</text><text x="210" y="507" text-anchor="middle" class="map-small-label">KORNMARKT</text>
+              <path class="map-blocks" d="M132 92h122v94H132zM357 86h140v118H357zM116 233h128v90H116zM370 236h156v86H370zM162 344h111v123H162zM345 344h110v123H345z"/>
+              <path class="map-road main" d="M310 76V260M310 330v142"/><path class="map-road side" d="M310 294H494M310 294H136M310 362l-62 65M310 362l64 65"/>
+              <path class="map-road thin" d="M180 128h116M334 132h131M190 239h102M375 236h120M194 393h67M359 393h75"/>
+              <circle class="map-place porta" cx="310" cy="66" r="23"/><path class="map-arch" d="M293 74v-16c0-11 15-11 15 0v16m4 0v-16c0-11 15-11 15 0v16"/>
+              <circle class="map-place market" cx="310" cy="294" r="45"/><circle class="map-fountain" cx="310" cy="294" r="14"/><path class="map-place dom" d="M494 306v-36h38v36m-30-36v-19m22 19v-19"/><circle class="map-place korn" cx="310" cy="470" r="22"/>
+              <path class="map-route-line" d="M310 88V246M354 294H470M310 338v96M286 348l-44 59M334 348l45 59"/>
+              <circle class="map-player-marker" id="map-player-large" cx="94" cy="100" r="9"/>
+              <text class="map-target-marker" id="map-quest-target" x="284" y="281">✦</text>
+              <text x="310" y="30" text-anchor="middle" class="map-north">N ↑</text>
+              <text x="344" y="71" class="map-label">PORTA NIGRA</text><text x="324" y="178" class="map-label">SIMEONSTRASSE</text>
+              <text x="310" y="354" text-anchor="middle" class="map-label">HAUPTMARKT</text><text x="392" y="279" class="map-label">STERNSTRASSE</text>
+              <text x="493" y="250" class="map-label">DOMFREIHOF</text><text x="128" y="286" class="map-small-label">JAKOBSTR.</text>
+              <text x="188" y="438" class="map-small-label">BROTSTR.</text><text x="366" y="438" class="map-small-label">FLEISCHSTR.</text><text x="310" y="507" text-anchor="middle" class="map-small-label">KORNMARKT</text>
             </svg>
             <div class="map-legend"><span><i class="legend-player"></i>Du bist hier</span><span><i class="legend-route"></i>Spielweg</span></div>
           </div>
@@ -252,7 +252,9 @@ export class GameUI {
   updateMarket(_visitors, location = { name: 'Hauptmarkt', zone: 'hauptmarkt' }, playerFacing = null) {
     this.visitedLocations ||= new Set();
     const names = { porta: 'Porta Nigra', simeonstrasse: 'Simeonstraße', christophstrasse: 'Christophstraße', margaretengaesschen: 'Margaretengäßchen', hauptmarkt: 'Hauptmarkt', sternstrasse: 'Sternstraße', domfreihof: 'Domfreihof', brotstrasse: 'Brotstraße', fleischstrasse: 'Fleischstraße', kornmarkt: 'Kornmarkt', hauptbahnhof: 'Hauptbahnhof' };
-    const mapPositions = { porta: ['50', '14'], simeonstrasse: ['50', '42'], christophstrasse: ['20', '17'], margaretengaesschen: ['75', '28'], hauptmarkt: ['50', '69'], sternstrasse: ['22', '69'], domfreihof: ['16', '58'], brotstrasse: ['35', '85'], fleischstrasse: ['65', '85'], kornmarkt: ['50', '93'], hauptbahnhof: ['8', '18'] };
+    // Map orientation is fixed for the entire game: Porta Nigra north,
+    // Hauptmarkt in the centre, Domfreihof east and Kornmarkt south.
+    const mapPositions = { porta: ['50', '14'], simeonstrasse: ['50', '42'], christophstrasse: ['25', '20'], margaretengaesschen: ['74', '27'], hauptmarkt: ['50', '57'], sternstrasse: ['67', '57'], domfreihof: ['86', '57'], brotstrasse: ['39', '80'], fleischstrasse: ['61', '80'], kornmarkt: ['50', '92'], hauptbahnhof: ['15', '18'] };
     const place = names[location.zone] || names.hauptmarkt;
     this.elements.locationName.textContent = place;
     if (this.hudIsVisible && !this.visitedLocations.has(location.zone)) this.showLocationToast(place);
@@ -264,7 +266,7 @@ export class GameUI {
       const angle = -Math.atan2(playerFacing.x || 0, playerFacing.z || 1) * 180 / Math.PI;
       this.elements.minimapWorld.style.setProperty('--map-rotation', `${angle}deg`);
     }
-    const mapPositionsLarge = { porta: ['210', '96'], simeonstrasse: ['210', '232'], christophstrasse: ['116', '112'], margaretengaesschen: ['302', '145'], hauptmarkt: ['210', '365'], sternstrasse: ['116', '365'], domfreihof: ['92', '309'], brotstrasse: ['142', '443'], fleischstrasse: ['278', '443'], kornmarkt: ['210', '470'], hauptbahnhof: ['58', '106'] };
+    const mapPositionsLarge = { porta: ['310', '96'], simeonstrasse: ['310', '190'], christophstrasse: ['156', '116'], margaretengaesschen: ['455', '145'], hauptmarkt: ['310', '294'], sternstrasse: ['405', '294'], domfreihof: ['514', '294'], brotstrasse: ['248', '427'], fleischstrasse: ['374', '427'], kornmarkt: ['310', '470'], hauptbahnhof: ['94', '100'] };
     const [x, y] = mapPositionsLarge[location.zone] || mapPositionsLarge.hauptmarkt;
     this.app.querySelector('#map-player-large').setAttribute('cx', x);
     this.app.querySelector('#map-player-large').setAttribute('cy', y);
@@ -277,8 +279,8 @@ export class GameUI {
 
   setQuest({ title, objective, count, targetId = null }) {
     this.mainQuest = { title, objective, count, targetId };
-    const targets = { johannes: ['180', '352'], marc: ['72', '286'], juergen: ['302', '145'], charly: ['196', '466'], weber: ['277', '431'], return: ['180', '352'], porta: ['210', '96'] };
-    const miniTargets = { johannes: ['45', '67'], marc: ['16', '58'], juergen: ['75', '28'], charly: ['50', '92'], weber: ['65', '83'], return: ['45', '67'], porta: ['50', '14'] };
+    const targets = { johannes: ['285', '281'], marc: ['508', '281'], juergen: ['455', '145'], charly: ['304', '466'], weber: ['370', '416'], return: ['285', '281'], porta: ['310', '96'] };
+    const miniTargets = { johannes: ['45', '56'], marc: ['85', '56'], juergen: ['74', '27'], charly: ['50', '91'], weber: ['61', '79'], return: ['45', '56'], porta: ['50', '14'] };
     const target = targets[targetId];
     this.elements.mapQuestTarget.style.display = target ? 'block' : 'none';
     if (target) {
@@ -291,7 +293,7 @@ export class GameUI {
 
   setSideQuests(quests = []) {
     this.sideQuests = quests.filter((quest) => quest && quest.state !== 'available' && quest.state !== 'completed');
-    const markerPositions = { 'porta-photo': ['47', '15'], 'lost-plectrum': ['35', '82'], 'find-the-dom': ['56', '67'] };
+    const markerPositions = { 'porta-photo': ['47', '15'], 'lost-plectrum': ['39', '78'], 'find-the-dom': ['83', '57'] };
     const nextSideQuest = this.sideQuests.find((quest) => quest.state === 'active' || quest.state === 'found') || this.sideQuests[0];
     this.setMinimapMarker(this.elements.minimapSideMarker, markerPositions[nextSideQuest?.id], Boolean(nextSideQuest));
     this.renderObjective(false);
