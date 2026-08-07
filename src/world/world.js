@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { SIDE_QUESTS } from '../data/chapter-one.js';
-import cobblestoneUrl from '../assets/hauptmarkt-cobblestone.png';
+import pavementLibraryUrl from '../assets/trier-pavement-material-library-v1.png';
 import slateRoofUrl from '../assets/trier-slate-roof.png';
 
 const PALETTE = {
@@ -38,12 +38,30 @@ const shared = {
 };
 
 let roofTexture;
-let cobblestoneTexture;
 let romanStoneTexture;
 let stuccoTexture;
 let fabricTexture;
+let pavementAtlasImage;
+let pavementAtlasLoading = false;
+let pavementPbrMaps;
+const pavementTileCache = new Map();
 const characterMaterialCache = new Map();
 const boxGeometryCache = new Map();
+
+// Every profile occupies one cell of the hand-painted Trier material atlas.
+// Their hues deliberately overlap so moving across the city feels continuous,
+// while the stone scale and laying patterns make every district readable.
+const PAVEMENT_PROFILES = Object.freeze({
+  hauptmarkt: { cell: [0, 0], scale: 10.5, fallback: ['#d6a66f', '#f0ca90'] },
+  domfreihof: { cell: [1, 0], scale: 7.4, fallback: ['#b5ab95', '#e0d2b5'] },
+  porta: { cell: [2, 0], scale: 12.5, fallback: ['#d7b273', '#f2d69b'] },
+  simeon: { cell: [0, 1], scale: 6.6, fallback: ['#8d8777', '#c7b89c'] },
+  kornmarkt: { cell: [1, 1], scale: 4.25, fallback: ['#4a4a43', '#827765'] },
+  fleisch: { cell: [2, 1], scale: 3.25, fallback: ['#7b776c', '#b6ad98'] },
+  brot: { cell: [0, 2], scale: 3.8, fallback: ['#b58d57', '#e4c586'] },
+  christoph: { cell: [1, 2], scale: 9.0, fallback: ['#b7aa90', '#ded0b6'] },
+  margareten: { cell: [2, 2], scale: 3.7, fallback: ['#564937', '#8a7658'] },
+});
 
 function roundedBoxGeometry(w, h, d, bevel = 0) {
   // Most façade parts reuse only a handful of dimensions.  Sharing their
@@ -1361,11 +1379,11 @@ function addPortaForecourt(parent, quality) {
   // The Porta needs the generous civic room visible in the reference photos.
   // The broad square sits to the left of the continuing Simeonstraße, so its
   // empty centre frames the monument instead of reading as another street.
-  const paving = new THREE.Mesh(new THREE.PlaneGeometry(31.6, 29.2), pavingMaterial(31.6, 29.2, 0xd6bd94, 381));
+  const paving = new THREE.Mesh(new THREE.PlaneGeometry(31.6, 29.2), pavingMaterial(31.6, 29.2, 0xd6bd94, 381, .86, 'porta'));
   paving.rotation.x = -Math.PI / 2;
   paving.position.set(-4.2, -.018, 70.1);
   forecourt.add(paving);
-  const centralWalk = new THREE.Mesh(new THREE.PlaneGeometry(13.1, 25.8), pavingMaterial(13.1, 25.8, 0xdcc49d, 382, .9));
+  const centralWalk = new THREE.Mesh(new THREE.PlaneGeometry(13.1, 25.8), pavingMaterial(13.1, 25.8, 0xdcc49d, 382, .84, 'porta'));
   centralWalk.rotation.x = -Math.PI / 2;
   centralWalk.position.set(-4.1, -.012, 70.25);
   forecourt.add(centralWalk);
@@ -1405,16 +1423,16 @@ function addPortaSimeonEdge(parent, quality) {
   // Seen from the Vorplatz, Simeonstraße now runs clearly along the right-hand
   // edge. A gentle diagonal links it to the existing southern shopping street
   // without turning the square into a maze of rigid, game-like corridors.
-  const connector = new THREE.Mesh(new THREE.PlaneGeometry(7.55, 15.0), pavingMaterial(7.55, 15.0, 0xd4b98e, 386));
+  const connector = new THREE.Mesh(new THREE.PlaneGeometry(7.55, 15.0), pavingMaterial(7.55, 15.0, 0xd4b98e, 386, .88, 'simeon'));
   connector.rotation.set(-Math.PI / 2, 1.01, 0);
   connector.position.set(6.0, -.015, 58.3);
   street.add(connector);
-  const paving = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 30.2), pavingMaterial(7.6, 30.2, 0xd3b88f, 387));
+  const paving = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 30.2), pavingMaterial(7.6, 30.2, 0xd3b88f, 387, .88, 'simeon'));
   paving.rotation.x = -Math.PI / 2;
   paving.position.set(12.6, -.016, 68.2);
   street.add(paving);
   for (const sidewalkX of [9.3, 15.9]) {
-    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.02, 29.6), pavingMaterial(1.02, 29.6, 0xa89f92, 388 + (sidewalkX > 12 ? 1 : 0), .91));
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.02, 29.6), pavingMaterial(1.02, 29.6, 0xa89f92, 388 + (sidewalkX > 12 ? 1 : 0), .93, 'simeon'));
     sidewalk.rotation.x = -Math.PI / 2;
     sidewalk.position.set(sidewalkX, -.01, 68.25);
     street.add(sidewalk);
@@ -1445,22 +1463,22 @@ function addChristophstrasse(parent) {
   // At the north-east corner of the Vorplatz, Simeonstraße visibly turns right
   // into Margaretengäßchen. The short continuation is enough to establish the
   // city beyond the gate, without diluting this slice with a second district.
-  const eastbound = new THREE.Mesh(new THREE.PlaneGeometry(26.6, 7.4), pavingMaterial(26.6, 7.4, 0xd3b88f, 391));
+  const eastbound = new THREE.Mesh(new THREE.PlaneGeometry(26.6, 7.4), pavingMaterial(26.6, 7.4, 0xd3b88f, 391, .9, 'margareten'));
   eastbound.rotation.x = -Math.PI / 2;
   eastbound.position.set(28.9, -.016, 69.3);
   street.add(eastbound);
-  const southbound = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 18.0), pavingMaterial(7.4, 18.0, 0xd0b38a, 392));
+  const southbound = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 18.0), pavingMaterial(7.4, 18.0, 0xd0b38a, 392, .91, 'margareten'));
   southbound.rotation.x = -Math.PI / 2;
   southbound.position.set(39.0, -.016, 61.0);
   street.add(southbound);
   for (const z of [66.05, 72.55]) {
-    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(26.1, 1.08), pavingMaterial(26.1, 1.08, 0xa89f92, 393 + (z > 69 ? 1 : 0), .91));
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(26.1, 1.08), pavingMaterial(26.1, 1.08, 0xa89f92, 393 + (z > 69 ? 1 : 0), .93, 'margareten'));
     sidewalk.rotation.x = -Math.PI / 2;
     sidewalk.position.set(28.9, -.01, z);
     street.add(sidewalk);
   }
   for (const x of [35.7, 42.3]) {
-    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.04, 16.7), pavingMaterial(1.04, 16.7, 0xa89f92, 395 + (x > 39 ? 1 : 0), .91));
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.04, 16.7), pavingMaterial(1.04, 16.7, 0xa89f92, 395 + (x > 39 ? 1 : 0), .93, 'margareten'));
     sidewalk.rotation.x = -Math.PI / 2;
     sidewalk.position.set(x, -.01, 61.0);
     street.add(sidewalk);
@@ -1553,17 +1571,17 @@ function addMargaretengaesschenToStation(parent, quality) {
   // previous diagonal only touched the district visually, which made the
   // station connection easy to miss while playing. This lane stays clear of
   // the Porta's west tower and physically overlaps both pieces of paving.
-  const connector = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 18.0), pavingMaterial(9.4, 18.0, 0xd1b38b, 441));
+  const connector = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 18.0), pavingMaterial(9.4, 18.0, 0xd1b38b, 441, .88, 'christoph'));
   connector.rotation.x = -Math.PI / 2;
   connector.position.set(-18.1, -.016, 83.4);
   district.add(connector);
   for (const connectorX of [-22.65, -13.55]) addBox(district, { x: connectorX, y: -.01, z: 83.4, w: .065, h: .04, d: 17.6, color: 0x756d62, roughness: .78, bevel: .008 });
-  const street = new THREE.Mesh(new THREE.PlaneGeometry(44.5, 8.55), pavingMaterial(44.5, 8.55, 0xd4b88e, 442));
+  const street = new THREE.Mesh(new THREE.PlaneGeometry(44.5, 8.55), pavingMaterial(44.5, 8.55, 0xd4b88e, 442, .86, 'christoph'));
   street.rotation.x = -Math.PI / 2;
   street.position.set(-41.6, -.016, 90.0);
   district.add(street);
   for (const z of [86.15, 93.85]) {
-    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(43.8, 1.02), pavingMaterial(43.8, 1.02, 0xa79e90, 443 + (z > 90 ? 1 : 0), .91));
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(43.8, 1.02), pavingMaterial(43.8, 1.02, 0xa79e90, 443 + (z > 90 ? 1 : 0), .93, 'christoph'));
     sidewalk.rotation.x = -Math.PI / 2;
     sidewalk.position.set(-41.6, -.01, z);
     district.add(sidewalk);
@@ -1588,11 +1606,11 @@ function addMargaretengaesschenToStation(parent, quality) {
   // The street releases into a dedicated station square. Its broad paving and
   // clear gap in front of the façade make the Hauptbahnhof a destination, not
   // merely another façade at the end of a corridor.
-  const stationSquare = new THREE.Mesh(new THREE.PlaneGeometry(22.5, 25.5), pavingMaterial(22.5, 25.5, 0xd8bd93, 475));
+  const stationSquare = new THREE.Mesh(new THREE.PlaneGeometry(22.5, 25.5), pavingMaterial(22.5, 25.5, 0xd8bd93, 475, .84, 'christoph'));
   stationSquare.rotation.x = -Math.PI / 2;
   stationSquare.position.set(-69.2, -.019, 90.0);
   district.add(stationSquare);
-  const arrivalPath = new THREE.Mesh(new THREE.PlaneGeometry(13.2, 7.0), pavingMaterial(13.2, 7.0, 0xdcc7a6, 476, .9));
+  const arrivalPath = new THREE.Mesh(new THREE.PlaneGeometry(13.2, 7.0), pavingMaterial(13.2, 7.0, 0xdcc7a6, 476, .88, 'christoph'));
   arrivalPath.rotation.x = -Math.PI / 2;
   arrivalPath.position.set(-76.0, -.012, 90.0);
   district.add(arrivalPath);
@@ -1613,14 +1631,14 @@ function addMargaretengaesschenToStation(parent, quality) {
 function addSimeonstrasse(parent, quality) {
   const street = new THREE.Group();
   street.name = 'Simeonstraße – Porta Nigra zum Hauptmarkt';
-  const paving = new THREE.Mesh(new THREE.PlaneGeometry(10.2, 45), pavingMaterial(10.2, 45, 0xd6bd94, 301));
+  const paving = new THREE.Mesh(new THREE.PlaneGeometry(10.2, 45), pavingMaterial(10.2, 45, 0xd6bd94, 301, .87, 'simeon'));
   paving.rotation.x = -Math.PI / 2;
   paving.position.set(0, -.012, 37.5);
   street.add(paving);
   // Two subtle pavement strips make the long pedestrian axis legible and give
   // the storefronts a proper threshold instead of letting cobbles run wall to wall.
   for (const sidewalkX of [-4.35, 4.35]) {
-    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.28, 44.7), pavingMaterial(1.28, 44.7, 0xa89f92, 320 + (sidewalkX > 0 ? 1 : 0), .92));
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.28, 44.7), pavingMaterial(1.28, 44.7, 0xa89f92, 320 + (sidewalkX > 0 ? 1 : 0), .93, 'simeon'));
     sidewalk.rotation.x = -Math.PI / 2;
     sidewalk.position.set(sidewalkX, -.006, 37.5);
     street.add(sidewalk);
@@ -1628,7 +1646,7 @@ function addSimeonstrasse(parent, quality) {
   for (const curbX of [-3.67, 3.67]) addBox(street, { x: curbX, y: -.01, z: 37.5, w: .07, h: .045, d: 44.7, color: 0x756d62, roughness: .78 });
   // The street arrives at the middle of the northern Hauptmarkt edge. The
   // opening deliberately lines up with the fountain and reads as a real route.
-  const marketMouth = new THREE.Mesh(new THREE.PlaneGeometry(10.8, 8.5), pavingMaterial(10.8, 8.5, 0xd7bb91, 342));
+  const marketMouth = new THREE.Mesh(new THREE.PlaneGeometry(10.8, 8.5), pavingMaterial(10.8, 8.5, 0xd7bb91, 342, .87, 'hauptmarkt'));
   marketMouth.rotation.x = -Math.PI / 2;
   marketMouth.position.set(0, -.014, 17.2);
   street.add(marketMouth);
@@ -1663,21 +1681,22 @@ function addSimeonstrasse(parent, quality) {
 function addSouthernStreet(parent, { name, x, seed, signs, accent }) {
   const street = new THREE.Group();
   street.name = `${name} – südlich vom Hauptmarkt`;
+  const pavementProfile = name === 'Fleischstraße' ? 'fleisch' : 'brot';
   // Brot- und Fleischstraße are deliberately narrow, continuous urban
   // corridors. The 3D city model shows that this part of Trier is made of
   // dense blocks and shop façades rather than detached buildings.
-  const paving = new THREE.Mesh(new THREE.PlaneGeometry(7.3, 42.5), pavingMaterial(7.3, 42.5, 0xd3b68e, seed + 14));
+  const paving = new THREE.Mesh(new THREE.PlaneGeometry(7.3, 42.5), pavingMaterial(7.3, 42.5, 0xd3b68e, seed + 14, .9, pavementProfile));
   paving.rotation.x = -Math.PI / 2;
   paving.position.set(x, -.014, -34.1);
   street.add(paving);
   for (const sidewalkX of [x - 3.03, x + 3.03]) {
-    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 42.1), pavingMaterial(1.08, 42.1, 0xa79d90, seed + 30 + (sidewalkX > x ? 1 : 0), .92));
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 42.1), pavingMaterial(1.08, 42.1, 0xa79d90, seed + 30 + (sidewalkX > x ? 1 : 0), .93, pavementProfile));
     sidewalk.rotation.x = -Math.PI / 2;
     sidewalk.position.set(sidewalkX, -.007, -34.1);
     street.add(sidewalk);
   }
   for (const curbX of [x - 2.45, x + 2.45]) addBox(street, { x: curbX, y: -.01, z: -34.1, w: .07, h: .045, d: 42.1, color: 0x756d62, roughness: .78 });
-  const mouth = new THREE.Mesh(new THREE.PlaneGeometry(8.3, 9.2), pavingMaterial(8.3, 9.2, 0xd7bb91, seed + 44));
+  const mouth = new THREE.Mesh(new THREE.PlaneGeometry(8.3, 9.2), pavingMaterial(8.3, 9.2, 0xd7bb91, seed + 44, .88, pavementProfile));
   mouth.rotation.x = -Math.PI / 2;
   mouth.position.set(x, -.015, -16.7);
   street.add(mouth);
@@ -1757,7 +1776,7 @@ function addKornmarkt(parent) {
   // Both southern streets release sideways into this calmer, broader end
   // point. Its proportions are compressed for playability, but the dense
   // perimeter follows the city-model's continuous urban fabric.
-  const surface = new THREE.Mesh(new THREE.PlaneGeometry(38, 25), pavingMaterial(38, 25, 0xdfc79e, 1101));
+  const surface = new THREE.Mesh(new THREE.PlaneGeometry(38, 25), pavingMaterial(38, 25, 0xdfc79e, 1101, .93, 'kornmarkt'));
   surface.rotation.x = -Math.PI / 2;
   surface.position.set(0, -.012, -66.0);
   market.add(surface);
@@ -1807,12 +1826,12 @@ function addSternstrasse(parent) {
   // Sternstraße leaves the centre of the western Hauptmarkt edge. It is kept
   // opposite to the previously placed opening, so its direction agrees with
   // the player's orientation on the plaza.
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(20.5, 7.4), pavingMaterial(20.5, 7.4, 0xd8bd91, 1201));
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(20.5, 7.4), pavingMaterial(20.5, 7.4, 0xd8bd91, 1201, .88, 'domfreihof'));
   road.rotation.x = -Math.PI / 2;
   road.position.set(-31.0, -.015, 1.1);
   street.add(road);
   for (const sidewalkZ of [-2.05, 4.25]) {
-    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(20.3, 1.12), pavingMaterial(20.3, 1.12, 0xa9a093, 1210 + (sidewalkZ > 0 ? 1 : 0), .92));
+    const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(20.3, 1.12), pavingMaterial(20.3, 1.12, 0xa9a093, 1210 + (sidewalkZ > 0 ? 1 : 0), .93, 'domfreihof'));
     sidewalk.rotation.x = -Math.PI / 2;
     sidewalk.position.set(-31.0, -.006, sidewalkZ);
     street.add(sidewalk);
@@ -1841,7 +1860,7 @@ function addDomfreihof(parent, quality) {
   court.name = 'Domfreihof – Trier';
   // A deliberately generous court lets the sky open up beyond the narrow
   // Sternstraße. Its eastern edge stays open toward the Hauptmarkt.
-  const surface = new THREE.Mesh(new THREE.PlaneGeometry(38, 34), pavingMaterial(38, 34, 0xe2cba4, 1231));
+  const surface = new THREE.Mesh(new THREE.PlaneGeometry(38, 34), pavingMaterial(38, 34, 0xe2cba4, 1231, .86, 'domfreihof'));
   surface.rotation.x = -Math.PI / 2;
   surface.position.set(-53, -.012, 1);
   court.add(surface);
@@ -2510,33 +2529,184 @@ function addFlowerDrifts(parent) {
   });
 }
 
-function loadCobblestones() {
-  if (cobblestoneTexture) return cobblestoneTexture;
-  const texture = new THREE.TextureLoader().load(cobblestoneUrl);
+function profileForPaving(profile) {
+  return PAVEMENT_PROFILES[profile] || PAVEMENT_PROFILES.hauptmarkt;
+}
+
+function drawFallbackPavingTile(context, profile) {
+  const [dark, light] = profile.fallback;
+  const gradient = context.createLinearGradient(0, 0, 512, 512);
+  gradient.addColorStop(0, dark);
+  gradient.addColorStop(1, light);
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 512, 512);
+  for (let index = 0; index < 92; index += 1) {
+    const seed = index * 8.13 + profile.scale * 10;
+    const x = hash(seed) * 520 - 4;
+    const y = hash(seed + 2) * 520 - 4;
+    const w = 26 + hash(seed + 5) * 72;
+    const h = 22 + hash(seed + 7) * 54;
+    context.fillStyle = hash(seed + 4) > .52 ? 'rgba(255, 236, 191, .11)' : 'rgba(64, 47, 35, .12)';
+    context.fillRect(x, y, w, h);
+    context.strokeStyle = 'rgba(61, 53, 43, .26)';
+    context.lineWidth = 1.5;
+    context.strokeRect(x, y, w, h);
+  }
+}
+
+function redrawPavementTile(entry) {
+  const { canvas, context, profile, texture } = entry;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  if (pavementAtlasImage) {
+    const cellWidth = pavementAtlasImage.width / 3;
+    const cellHeight = pavementAtlasImage.height / 3;
+    const inset = Math.max(3, Math.floor(cellWidth * .012));
+    const [column, row] = profile.cell;
+    context.drawImage(
+      pavementAtlasImage,
+      column * cellWidth + inset,
+      row * cellHeight + inset,
+      cellWidth - inset * 2,
+      cellHeight - inset * 2,
+      0, 0, canvas.width, canvas.height,
+    );
+  } else {
+    drawFallbackPavingTile(context, profile);
+  }
+
+  // Fine sun-faded variation keeps the painted atlas from looking stamped.
+  for (let index = 0; index < 48; index += 1) {
+    const seed = index * 11.71 + profile.scale;
+    context.fillStyle = hash(seed) > .5 ? 'rgba(255, 231, 180, .045)' : 'rgba(55, 47, 39, .045)';
+    context.beginPath();
+    context.arc(hash(seed + 2) * 512, hash(seed + 4) * 512, 2 + hash(seed + 6) * 9, 0, Math.PI * 2);
+    context.fill();
+  }
+  texture.needsUpdate = true;
+}
+
+function loadPavementAtlas() {
+  if (pavementAtlasImage || pavementAtlasLoading) return;
+  pavementAtlasLoading = true;
+  const image = new Image();
+  image.decoding = 'async';
+  image.onload = () => {
+    pavementAtlasImage = image;
+    pavementTileCache.forEach(redrawPavementTile);
+  };
+  image.onerror = () => { pavementAtlasLoading = false; };
+  image.src = pavementLibraryUrl;
+}
+
+function pavingTile(profileName) {
+  const profile = profileForPaving(profileName);
+  const key = profileName in PAVEMENT_PROFILES ? profileName : 'hauptmarkt';
+  const cached = pavementTileCache.get(key);
+  if (cached) return cached.texture;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1, 1);
-  texture.anisotropy = 6;
-  cobblestoneTexture = texture;
-  return cobblestoneTexture;
+  texture.anisotropy = 8;
+  const entry = { canvas, context: canvas.getContext('2d'), profile, texture };
+  pavementTileCache.set(key, entry);
+  redrawPavementTile(entry);
+  loadPavementAtlas();
+  return texture;
 }
 
-function pavingTexture(width, depth, seed = 0) {
-  const texture = loadCobblestones().clone();
+function createPavementPbrMaps() {
+  if (pavementPbrMaps) return pavementPbrMaps;
+  const createMap = (draw) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    draw(canvas.getContext('2d'));
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = 4;
+    return texture;
+  };
+  const normal = createMap((context) => {
+    context.fillStyle = '#8080ff';
+    context.fillRect(0, 0, 128, 128);
+    for (let index = 0; index < 46; index += 1) {
+      const seed = index * 3.41;
+      context.strokeStyle = index % 2 ? '#7b84ff' : '#8580ff';
+      context.lineWidth = 1 + hash(seed + 2);
+      context.beginPath();
+      context.moveTo(hash(seed) * 128, hash(seed + 4) * 128);
+      context.lineTo(hash(seed + 7) * 128, hash(seed + 9) * 128);
+      context.stroke();
+    }
+  });
+  const roughness = createMap((context) => {
+    context.fillStyle = '#d8d8d8';
+    context.fillRect(0, 0, 128, 128);
+    for (let index = 0; index < 130; index += 1) {
+      const tone = 180 + Math.floor(hash(index * 7.9) * 54);
+      context.fillStyle = `rgb(${tone}, ${tone}, ${tone})`;
+      context.fillRect(hash(index + 4) * 128, hash(index + 14) * 128, 2 + hash(index + 2) * 8, 2 + hash(index + 6) * 7);
+    }
+  });
+  const ao = createMap((context) => {
+    context.fillStyle = '#eeeeee';
+    context.fillRect(0, 0, 128, 128);
+    context.strokeStyle = '#b8b8b8';
+    context.lineWidth = 2;
+    for (let position = 6; position < 128; position += 23) {
+      context.beginPath();
+      context.moveTo(position, 0);
+      context.lineTo(position - 9, 128);
+      context.stroke();
+    }
+  });
+  pavementPbrMaps = { normal, roughness, ao };
+  return pavementPbrMaps;
+}
+
+function pavingTexture(width, depth, seed = 0, profile = 'hauptmarkt') {
+  const texture = pavingTile(profile).clone();
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  // One painted sheet covers roughly ten world metres. Scaling by the actual
-  // surface dimensions keeps each stone believable on streets and plazas.
-  texture.repeat.set(Math.max(.8, width / 10), Math.max(.8, depth / 10));
+  const scale = profileForPaving(profile).scale;
+  // Scaling by the actual surface dimensions keeps the profile's stone size
+  // believable on a square, a pedestrian street and a tiny alley alike.
+  texture.repeat.set(Math.max(.8, width / scale), Math.max(.8, depth / scale));
   texture.offset.set(hash(seed + 17), hash(seed + 31));
   texture.anisotropy = 6;
   texture.needsUpdate = true;
   return texture;
 }
 
-function pavingMaterial(width, depth, color, seed = 0, roughness = .9) {
-  return material(color, { map: pavingTexture(width, depth, seed), roughness, metalness: 0 });
+function pavingMaterial(width, depth, color, seed = 0, roughness = .9, profile = 'hauptmarkt') {
+  const pbr = createPavementPbrMaps();
+  const scale = profileForPaving(profile).scale;
+  const repeatX = Math.max(.8, width / scale);
+  const repeatY = Math.max(.8, depth / scale);
+  const configurePbrMap = (texture, xOffset, yOffset) => {
+    const map = texture.clone();
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.RepeatWrapping;
+    map.repeat.set(repeatX, repeatY);
+    map.offset.set(hash(seed + xOffset), hash(seed + yOffset));
+    map.needsUpdate = true;
+    return map;
+  };
+  return material(color, {
+    map: pavingTexture(width, depth, seed, profile),
+    normalMap: configurePbrMap(pbr.normal, 53, 61),
+    normalScale: new THREE.Vector2(.17, .17),
+    roughnessMap: configurePbrMap(pbr.roughness, 71, 89),
+    aoMap: configurePbrMap(pbr.ao, 97, 107),
+    aoMapIntensity: .28,
+    roughness,
+    metalness: 0,
+  });
 }
 
 function createPavingVariation() {
@@ -2737,7 +2907,7 @@ export function createWorld(scene, quality = 'medium') {
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(150, 170),
-    pavingMaterial(150, 170, 0xf3d39d, 1401, .92),
+    pavingMaterial(150, 170, 0xf3d39d, 1401, .88, 'hauptmarkt'),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(0, -.03, 5);
