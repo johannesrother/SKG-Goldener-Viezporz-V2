@@ -256,7 +256,8 @@ export class CityStrollQuest {
       if (state === 'found' && quest.id === 'lost-plectrum' && this.isNear(quest.point, position, 2.25)) {
         return { type: 'return', quest };
       }
-      if (state === 'active' && quest.id !== 'lost-plectrum' && this.isNear(quest.target, position, 1.45)) {
+      if ((state === 'active' || state === 'discovered') && quest.id !== 'lost-plectrum'
+        && this.isNear(quest.target, position, quest.id === 'find-the-dom' ? 2.25 : 1.65)) {
         // The companion may be a step behind the player due to collision
         // avoidance. Reaching the marked place is enough to finish the small
         // encounter; the world then settles the companion at the destination.
@@ -385,27 +386,20 @@ export class CityStrollQuest {
     this.setPrompt(null);
     this.callbacks.onDialogue?.(quest.opening, () => {
       this.callbacks.onChoice?.({ speaker: quest.npc, text: 'Was sagst du?', choices: quest.choices }, (choice) => {
-        if (choice === 'accept') {
-          this.activateSideQuest(quest);
-          return;
-        }
-        const reply = quest.replies?.[choice] || [];
-        this.callbacks.onDialogue?.(reply, () => {
-          this.talking = false;
-          this.nextAmbientAt = this.currentTime + 26 + Math.random() * 18;
-        });
+        // These are role-play answers, never fail states. Every reply keeps
+        // the small encounter moving towards its gentle completion.
+        this.activateSideQuest(quest, quest.replies?.[choice] || []);
       });
     });
   }
 
-  activateSideQuest(quest) {
+  activateSideQuest(quest, responseLines = []) {
     this.sideQuests[quest.id] = 'active';
     if (ESCORT_QUEST_IDS.has(quest.id)) this.sideQuestEscorts[quest.id] = true;
     this.syncSideQuests();
     this.save();
-    this.callbacks.onDialogue?.([
-      { speaker: 'Optionale Nebenquest', text: `${quest.title}: ${quest.objective}` },
-    ], () => {
+    const confirmation = { speaker: 'Optionale Nebenquest', text: `${quest.title}: ${quest.objective}` };
+    this.callbacks.onDialogue?.([...(responseLines || []), confirmation], () => {
       this.talking = false;
       this.nextAmbientAt = this.currentTime + 38 + Math.random() * 20;
     });
