@@ -142,26 +142,97 @@ export const STORY_STAGES = [
   },
 ];
 
-export const OPTIONAL_EVENTS = [
+// These are deliberately the only three side quests in chapter one.  They
+// share the story world but have their own state, icon language and quest-log
+// section so they never compete with the evening's main walk.
+export const SIDE_QUESTS = [
   {
-    id: 'christoph-window', point: { x: -45, z: 88 }, prompt: 'Ein Schaufenster ansehen', memory: 'Feierabend in der Christophstraße',
-    lines: [{ speaker: 'Du', text: 'Zwischen den Schaufenstern und Fahrrädern wirkt Trier für einen Moment ganz alltäglich.' }],
+    id: 'porta-photo',
+    title: 'DER BESTE BLICK AUF DIE PORTA',
+    shortTitle: 'Der beste Blick auf die Porta',
+    npc: 'Fotografin',
+    point: { x: -8.3, z: 60.2 },
+    target: { x: -5.8, z: 76.2 },
+    memory: 'Der beste Blick auf die Porta',
+    objective: 'Führe die Fotografin zu einem guten Aussichtspunkt.',
+    prompt: 'Optionale Nebenquest: Der beste Blick auf die Porta',
+    opening: [
+      { speaker: 'Fotografin', text: 'Entschuldigung.' },
+      { speaker: 'Fotografin', text: 'Ich versuche seit zehn Minuten ein vernünftiges Foto von der Porta zu machen.' },
+      { speaker: 'Fotografin', text: 'Aber entweder läuft jemand durchs Bild oder ich stehe komplett falsch.' },
+    ],
+    choices: [
+      { id: 'accept', label: 'Ich kenne einen guten Platz.' },
+      { id: 'hint', label: 'Versuch es etwas weiter hinten.' },
+      { id: 'later', label: 'Tut mir leid, ich muss weiter.' },
+    ],
+    replies: {
+      hint: [{ speaker: 'Fotografin', text: 'Weiter hinten? Das ist immerhin genauer als meine bisherige Strategie.' }],
+      later: [{ speaker: 'Fotografin', text: 'Kein Problem. Die Porta läuft mir hoffentlich nicht weg.' }],
+    },
+    completion: [
+      { speaker: 'Fotografin', text: 'Ja.' },
+      { speaker: 'Fotografin', text: 'Genau so. Danke dir.' },
+      { speaker: 'Fotografin', text: 'Jetzt sieht die Porta endlich so aus, wie sie sich anfühlt.' },
+    ],
   },
   {
-    id: 'bike', point: { x: -38.4, z: 92 }, prompt: 'Einen Fahrradfahrer vorbeilassen', memory: 'Rücksicht im Feierabendverkehr',
-    lines: [{ speaker: 'Fahrradfahrer', text: 'Danke! In der Altstadt gewinnt meistens der, der kurz wartet.' }, { speaker: 'Du', text: 'Klingt nach einer guten Regel.' }],
+    id: 'lost-plectrum',
+    title: 'DAS VERLORENE PLEKTRUM',
+    shortTitle: 'Das verlorene Plektrum',
+    npc: 'Straßenmusiker',
+    point: { x: 1.15, z: 39.4 },
+    target: { x: -2.15, z: 34.15 },
+    memory: 'Das verlorene Plektrum',
+    objective: 'Suche in der Nähe des Straßenmusikers.',
+    prompt: 'Optionale Nebenquest: Das verlorene Plektrum',
+    opening: [
+      { speaker: 'Straßenmusiker', text: 'Mist.' },
+      { speaker: 'Straßenmusiker', text: 'Mein Plektrum ist irgendwo runtergefallen.' },
+      { speaker: 'Straßenmusiker', text: 'Ohne das Ding klingt das alles nur halb so gut.' },
+    ],
+    choices: [
+      { id: 'accept', label: 'Ich suche kurz danach.' },
+      { id: 'hint', label: 'Vielleicht liegt es direkt hier.' },
+      { id: 'later', label: 'Ich muss weiter.' },
+    ],
+    replies: {
+      hint: [{ speaker: 'Straßenmusiker', text: 'Wenn es direkt hier läge, hätte ich schon wieder angefangen zu spielen.' }],
+      later: [{ speaker: 'Straßenmusiker', text: 'Verstehe ich. Mein Plektrum hat offenbar mehr Zeit als wir beide.' }],
+    },
+    completion: [
+      { speaker: 'Straßenmusiker', text: 'Da ist es ja.' },
+      { speaker: 'Straßenmusiker', text: 'Dann bekommt ihr jetzt wenigstens ein vernünftiges Lied.' },
+    ],
   },
   {
-    id: 'tourist', point: { x: -8.2, z: 57.9 }, prompt: 'Einem Touristen den Weg zeigen', memory: 'Ein guter Weg',
-    lines: [{ speaker: 'Tourist', text: 'Entschuldigung, wissen Sie, wo es zum Dom geht?' }, { speaker: 'Du', text: 'Durch die Simeonstraße bis zum Hauptmarkt und dann Richtung Sternstraße.' }, { speaker: 'Tourist', text: 'Perfekt. Dann schaue ich mir unterwegs gleich mehr von Trier an.' }],
-  },
-  {
-    id: 'simeon-music', point: { x: 1.2, z: 39.5 }, prompt: 'Der Straßenmusik zuhören', memory: 'Straßenmusik in der Simeonstraße',
-    lines: [{ speaker: 'Straßenmusiker', text: 'Für Trier spielt man am besten etwas, das genug Platz für Umwege lässt.' }],
-  },
-  {
-    id: 'plectrum', point: { x: 1.4, z: -66.2 }, prompt: 'Das Plektrum suchen', memory: 'Charly und der Straßenmusiker',
-    lines: [{ speaker: 'Straßenmusiker', text: 'Mein Plektrum hat sich für einen eigenen Stadtrundgang entschieden.' }, { speaker: 'Du', text: 'Es liegt direkt neben deinem Koffer.' }, { speaker: 'Charly', text: 'Trier ist klein. Man muss nur wissen, wo man hinsieht.' }],
+    id: 'find-the-dom',
+    title: 'WO IST DER DOM?',
+    shortTitle: 'Wo ist der Dom?',
+    npc: 'Touristenpaar',
+    point: { x: 6.2, z: 8.0 },
+    target: { x: -45.5, z: 7.0 },
+    memory: 'Der Weg zum Dom',
+    objective: 'Bringe die Touristen zum Domfreihof.',
+    prompt: 'Optionale Nebenquest: Wo ist der Dom?',
+    opening: [
+      { speaker: 'Touristin', text: 'Entschuldigung.' },
+      { speaker: 'Tourist', text: 'Wir suchen den Dom.' },
+      { speaker: 'Touristin', text: 'Irgendwie laufen wir immer wieder im Kreis.' },
+    ],
+    choices: [
+      { id: 'accept', label: 'Ich kann euch den Weg zeigen.' },
+      { id: 'hint', label: 'Durch die Sternstraße.' },
+      { id: 'later', label: 'Ich bin selbst gerade erst angekommen.' },
+    ],
+    replies: {
+      hint: [{ speaker: 'Tourist', text: 'Sternstraße. Das klingt schon deutlich weniger nach Kreis.' }],
+      later: [{ speaker: 'Touristin', text: 'Dann sind wir wenigstens nicht die Einzigen, die sich orientieren müssen.' }],
+    },
+    completion: [
+      { speaker: 'Touristin', text: 'Da ist er ja!' },
+      { speaker: 'Tourist', text: 'Danke. Ohne dich wären wir wahrscheinlich wieder an der Porta gelandet.' },
+    ],
   },
 ];
 
