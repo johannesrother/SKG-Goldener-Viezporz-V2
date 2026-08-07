@@ -53,6 +53,10 @@ export function createChapterOneProgress() {
     memories: [],
     optionalEvents: [],
     sideQuests: {},
+    // Escort quests store an explicit consent flag. Quest state alone is not
+    // enough: an older save with an unfinished quest must never make an NPC
+    // appear as a follower immediately after the game loads.
+    sideQuestEscorts: {},
     sideQuestTutorialSeen: false,
     hints: [],
     drink: null,
@@ -71,6 +75,7 @@ export function loadChapterOneProgress() {
       memories: Array.isArray(value.memories) ? value.memories : [],
       optionalEvents: Array.isArray(value.optionalEvents) ? value.optionalEvents : [],
       sideQuests: value.sideQuests && typeof value.sideQuests === 'object' ? value.sideQuests : {},
+      sideQuestEscorts: value.sideQuestEscorts && typeof value.sideQuestEscorts === 'object' ? value.sideQuestEscorts : {},
       sideQuestTutorialSeen: Boolean(value.sideQuestTutorialSeen),
       hints: Array.isArray(value.hints) ? value.hints : [],
     };
