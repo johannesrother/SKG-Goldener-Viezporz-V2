@@ -3,6 +3,10 @@ export class GameUI {
     this.app = app;
     this.callbacks = callbacks;
     this.profile = { name: 'Johannes', outfit: 'dunkelgruen', hair: 'braun' };
+    this.mainQuest = null;
+    this.sideQuests = [];
+    this.visitedLocations = new Set();
+    this.hudIsVisible = false;
     this.render();
     this.bindEvents();
   }
@@ -59,13 +63,23 @@ export class GameUI {
           </div>
           <p class="menu-atmosphere">Hauptmarkt · Trier · Klick zum Laufen · WASD · Mausrad zum Zoomen</p>
         </section>
-        <section class="market-hud hidden" id="market-hud" aria-label="Trierer Altstadt Informationen">
-          <aside class="market-card"><p class="eyebrow" id="location-kicker">Hauptbahnhof · Trier</p><h2 id="story-clock">Freitag, 19:30</h2><div class="market-rule"></div><p><span class="status-dot"></span><span id="zone-mood">Ankommen · Züge in der Ferne</span></p><div class="quest-brief"><small>HAUPTGESCHICHTE</small><span><i class="main-quest-icon">◆</i><b id="quest-title">EIN FREITAGABEND IN TRIER</b><em id="quest-count">ANKOMMEN</em></span><p id="quest-objective">Komm entspannt am Hauptmarkt an.</p></div><div class="side-quest-log hidden" id="side-quest-log"><span class="side-quest-heading"><i>!</i>OPTIONALE NEBENQUESTS</span><div id="side-quest-list"></div></div></aside>
-          <div class="market-location" id="location-name">HAUPTBAHNHOF · TRIER</div>
-          <div class="market-visitor" id="visitor-count"><b>43</b><span>Menschen auf dem Platz</span></div>
-          <button class="route-mini" id="open-map" aria-label="Stadtkarte öffnen"><b>PORTA</b><i></i><b>SIMEON</b><i></i><b>MARKT</b><i></i><b>DOM</b><em id="map-player">●</em></button>
-          <div class="market-player"><i id="avatar-letter">J</i><div><b id="player-name">Johannes</b><span>Stadtrundgang</span></div></div>
-          <div class="market-controls"><span>WASD</span><span>bewegen</span><i></i><span>Scroll</span><span>zoomen</span></div>
+        <section class="market-hud hidden" id="market-hud" aria-label="Spielinformationen">
+          <div class="hud-clock" aria-label="Aktuelle Spielzeit"><span aria-hidden="true">◷</span><time id="story-clock">19:30</time></div>
+          <div class="location-toast hidden" id="location-toast" role="status"><span aria-hidden="true">⌖</span><b id="location-toast-name">Hauptbahnhof</b></div>
+          <aside class="hud-navigation" aria-label="Orientierung">
+            <p class="hud-location-name" id="location-name">Hauptbahnhof</p>
+            <button class="compass-minimap" id="open-map" aria-label="Stadtkarte öffnen" type="button">
+              <span class="minimap-world" id="minimap-world" aria-hidden="true">
+                <i class="minimap-water"></i><i class="minimap-road minimap-road-main"></i><i class="minimap-road minimap-road-east"></i><i class="minimap-road minimap-road-south"></i>
+                <i class="minimap-place minimap-porta"></i><i class="minimap-place minimap-market"></i><i class="minimap-place minimap-dom"></i><i class="minimap-place minimap-korn"></i><i class="minimap-position"></i>
+                <i class="minimap-wine" title="Weinstand"></i><i class="minimap-marker main hidden" id="minimap-quest-marker">◆</i><i class="minimap-marker side hidden" id="minimap-side-marker">!</i>
+              </span>
+              <i class="minimap-player-marker" aria-hidden="true"></i><span class="minimap-open-label">Karte</span>
+            </button>
+          </aside>
+          <aside class="hud-objective" id="quest-card" aria-live="polite">
+            <p class="hud-objective-kind" id="quest-kind">HAUPTQUEST</p><h2 id="quest-title">Ein Freitagabend in Trier</h2><p id="quest-objective">Triff Johannes am Weinstand.</p>
+          </aside>
           <button class="world-interact hidden" id="interact-button" aria-label="Mit Person sprechen"><kbd>E</kbd><span id="interact-label">Sprechen</span></button>
           <div class="mobile-controls"><div class="joystick" id="joystick" aria-label="Bewegen"><span>LAUFEN</span><i></i></div><button class="mobile-talk is-unavailable" id="mobile-interact" aria-label="Reden: Komm näher an eine Figur." data-hint="Komm näher an eine Figur." type="button" disabled><i>✦</i><span id="mobile-interact-text">REDEN</span></button></div>
         </section>
@@ -109,24 +123,22 @@ export class GameUI {
       settings: this.app.querySelector('#menu-settings'),
       credits: this.app.querySelector('#menu-credits'),
       menuMessage: this.app.querySelector('#menu-message'),
-      avatar: this.app.querySelector('#avatar-letter'),
-      playerName: this.app.querySelector('#player-name'),
-      visitors: this.app.querySelector('#visitor-count'),
       map: this.app.querySelector('#city-map'),
       openMap: this.app.querySelector('#open-map'),
       closeMap: this.app.querySelector('#close-map'),
       locationName: this.app.querySelector('#location-name'),
-      locationKicker: this.app.querySelector('#location-kicker'),
+      locationToast: this.app.querySelector('#location-toast'),
+      locationToastName: this.app.querySelector('#location-toast-name'),
       storyClock: this.app.querySelector('#story-clock'),
-      zoneMood: this.app.querySelector('#zone-mood'),
-      mapPlayer: this.app.querySelector('#map-player'),
+      minimapWorld: this.app.querySelector('#minimap-world'),
+      minimapQuestMarker: this.app.querySelector('#minimap-quest-marker'),
+      minimapSideMarker: this.app.querySelector('#minimap-side-marker'),
       mapQuestTarget: this.app.querySelector('#map-quest-target'),
       joystick: this.app.querySelector('#joystick'),
+      questCard: this.app.querySelector('#quest-card'),
+      questKind: this.app.querySelector('#quest-kind'),
       questTitle: this.app.querySelector('#quest-title'),
-      questCount: this.app.querySelector('#quest-count'),
       questObjective: this.app.querySelector('#quest-objective'),
-      sideQuestLog: this.app.querySelector('#side-quest-log'),
-      sideQuestList: this.app.querySelector('#side-quest-list'),
       interact: this.app.querySelector('#interact-button'),
       interactLabel: this.app.querySelector('#interact-label'),
       mobileInteract: this.app.querySelector('#mobile-interact'),
@@ -221,58 +233,103 @@ export class GameUI {
 
   begin(profile, visitors, showHud = true) {
     this.memories = new Set();
+    this.mainQuest = null;
+    this.sideQuests = [];
+    this.visitedLocations = new Set();
+    this.hudIsVisible = false;
     this.elements.start.classList.add('hidden');
     this.elements.hud.classList.toggle('hidden', !showHud);
-    this.elements.playerName.textContent = profile.name;
-    this.elements.avatar.textContent = profile.name.slice(0, 1).toUpperCase();
     this.setStoryTime('Freitag, 19:30');
     this.setSideQuests([]);
     this.updateMarket(visitors, { name: 'Hauptbahnhof Trier', zone: 'hauptbahnhof' });
   }
 
   revealHud() {
+    this.hudIsVisible = true;
     this.elements.hud.classList.remove('hidden');
   }
 
-  updateMarket(visitors, location = { name: 'Hauptmarkt', zone: 'hauptmarkt' }) {
-    this.elements.visitors.innerHTML = `<b>${visitors}</b><span>Menschen in der Stadt</span>`;
-    const names = { porta: 'PORTA NIGRA · TRIER', simeonstrasse: 'SIMEONSTRASSE · TRIER', christophstrasse: 'CHRISTOPHSTRASSE · TRIER', margaretengaesschen: 'MARGARETENGÄSSCHEN · TRIER', hauptmarkt: 'HAUPTMARKT · TRIER', sternstrasse: 'STERNSTRASSE · TRIER', domfreihof: 'DOMFREIHOF · TRIER', brotstrasse: 'BROTSTRASSE · TRIER', fleischstrasse: 'FLEISCHSTRASSE · TRIER', kornmarkt: 'KORNMARKT · TRIER', hauptbahnhof: 'HAUPTBAHNHOF · TRIER' };
-    const moods = { porta: 'Warme Sonne · Ankommen in Trier', simeonstrasse: 'Einkaufsstraße · Stadt im Abendlicht', christophstrasse: 'Richtung Bahnhof · Feierabend in Trier', margaretengaesschen: 'Stadtgasse · Cafés und Läden', hauptmarkt: 'Golden Hour · lebendiger Abend', sternstrasse: 'Warme Gasse · Blick zum Dom', domfreihof: 'Offener Himmel · Domglocken', brotstrasse: 'Ladenfronten · warmer Feierabend', fleischstrasse: 'Altstadtgasse · Stimmen und Viez', kornmarkt: 'Weiter Platz · Brunnen und Abendlicht', hauptbahnhof: 'Ankommen · Züge in der Ferne' };
-    const progress = { porta: '6%', simeonstrasse: '25%', christophstrasse: '4%', margaretengaesschen: '16%', hauptmarkt: '51%', sternstrasse: '71%', domfreihof: '91%', brotstrasse: '42%', fleischstrasse: '63%', kornmarkt: '55%', hauptbahnhof: '1%' };
-    this.elements.locationName.textContent = names[location.zone] || names.hauptmarkt;
-    this.elements.locationKicker.textContent = `${location.name || 'Hauptmarkt'} · Trier`;
-    this.elements.zoneMood.textContent = moods[location.zone] || moods.hauptmarkt;
-    this.elements.mapPlayer.style.left = progress[location.zone] || progress.hauptmarkt;
-    const mapPositions = { porta: ['210', '96'], simeonstrasse: ['210', '232'], christophstrasse: ['116', '112'], margaretengaesschen: ['302', '145'], hauptmarkt: ['210', '365'], sternstrasse: ['116', '365'], domfreihof: ['92', '309'], brotstrasse: ['142', '443'], fleischstrasse: ['278', '443'], kornmarkt: ['210', '470'], hauptbahnhof: ['58', '106'] };
-    const [x, y] = mapPositions[location.zone] || mapPositions.hauptmarkt;
+  updateMarket(_visitors, location = { name: 'Hauptmarkt', zone: 'hauptmarkt' }, playerFacing = null) {
+    this.visitedLocations ||= new Set();
+    const names = { porta: 'Porta Nigra', simeonstrasse: 'Simeonstraße', christophstrasse: 'Christophstraße', margaretengaesschen: 'Margaretengäßchen', hauptmarkt: 'Hauptmarkt', sternstrasse: 'Sternstraße', domfreihof: 'Domfreihof', brotstrasse: 'Brotstraße', fleischstrasse: 'Fleischstraße', kornmarkt: 'Kornmarkt', hauptbahnhof: 'Hauptbahnhof' };
+    const mapPositions = { porta: ['50', '14'], simeonstrasse: ['50', '42'], christophstrasse: ['20', '17'], margaretengaesschen: ['75', '28'], hauptmarkt: ['50', '69'], sternstrasse: ['22', '69'], domfreihof: ['16', '58'], brotstrasse: ['35', '85'], fleischstrasse: ['65', '85'], kornmarkt: ['50', '93'], hauptbahnhof: ['8', '18'] };
+    const place = names[location.zone] || names.hauptmarkt;
+    this.elements.locationName.textContent = place;
+    if (this.hudIsVisible && !this.visitedLocations.has(location.zone)) this.showLocationToast(place);
+    this.visitedLocations.add(location.zone);
+    const [miniX, miniY] = mapPositions[location.zone] || mapPositions.hauptmarkt;
+    this.elements.minimapWorld.style.setProperty('--player-x', `${miniX}%`);
+    this.elements.minimapWorld.style.setProperty('--player-y', `${miniY}%`);
+    if (playerFacing) {
+      const angle = -Math.atan2(playerFacing.x || 0, playerFacing.z || 1) * 180 / Math.PI;
+      this.elements.minimapWorld.style.setProperty('--map-rotation', `${angle}deg`);
+    }
+    const mapPositionsLarge = { porta: ['210', '96'], simeonstrasse: ['210', '232'], christophstrasse: ['116', '112'], margaretengaesschen: ['302', '145'], hauptmarkt: ['210', '365'], sternstrasse: ['116', '365'], domfreihof: ['92', '309'], brotstrasse: ['142', '443'], fleischstrasse: ['278', '443'], kornmarkt: ['210', '470'], hauptbahnhof: ['58', '106'] };
+    const [x, y] = mapPositionsLarge[location.zone] || mapPositionsLarge.hauptmarkt;
     this.app.querySelector('#map-player-large').setAttribute('cx', x);
     this.app.querySelector('#map-player-large').setAttribute('cy', y);
   }
 
   setStoryTime(clock) {
-    if (clock) this.elements.storyClock.textContent = clock;
+    const match = String(clock || '').match(/\b\d{1,2}:\d{2}\b/);
+    if (match) this.elements.storyClock.textContent = match[0];
   }
 
   setQuest({ title, objective, count, targetId = null }) {
-    this.elements.questTitle.textContent = title;
-    this.elements.questObjective.textContent = objective;
-    this.elements.questCount.textContent = count;
+    this.mainQuest = { title, objective, count, targetId };
     const targets = { johannes: ['180', '352'], marc: ['72', '286'], juergen: ['302', '145'], charly: ['196', '466'], weber: ['277', '431'], return: ['180', '352'], porta: ['210', '96'] };
+    const miniTargets = { johannes: ['45', '67'], marc: ['16', '58'], juergen: ['75', '28'], charly: ['50', '92'], weber: ['65', '83'], return: ['45', '67'], porta: ['50', '14'] };
     const target = targets[targetId];
     this.elements.mapQuestTarget.style.display = target ? 'block' : 'none';
     if (target) {
       this.elements.mapQuestTarget.setAttribute('x', target[0]);
       this.elements.mapQuestTarget.setAttribute('y', target[1]);
     }
+    this.setMinimapMarker(this.elements.minimapQuestMarker, miniTargets[targetId], Boolean(target));
+    this.renderObjective(true);
   }
 
   setSideQuests(quests = []) {
-    const visibleQuests = quests.filter((quest) => quest && quest.state !== 'available');
-    this.elements.sideQuestLog.classList.toggle('hidden', visibleQuests.length === 0);
-    this.elements.sideQuestList.innerHTML = visibleQuests.map((quest) => {
-      const status = quest.state === 'completed' ? 'ERLEDIGT' : quest.state === 'active' || quest.state === 'found' ? 'AKTIV' : 'FREIWILLIG';
-      return `<article class="side-quest-entry is-${this.escape(quest.state)}"><div><b>${this.escape(quest.title)}</b><p>${this.escape(quest.objective)}</p></div><em>${status}</em></article>`;
-    }).join('');
+    this.sideQuests = quests.filter((quest) => quest && quest.state !== 'available' && quest.state !== 'completed');
+    const markerPositions = { 'porta-photo': ['47', '15'], 'lost-plectrum': ['35', '82'], 'find-the-dom': ['56', '67'] };
+    const nextSideQuest = this.sideQuests.find((quest) => quest.state === 'active' || quest.state === 'found') || this.sideQuests[0];
+    this.setMinimapMarker(this.elements.minimapSideMarker, markerPositions[nextSideQuest?.id], Boolean(nextSideQuest));
+    this.renderObjective(false);
+  }
+
+  renderObjective(animate) {
+    const activeSideQuest = this.sideQuests?.find((quest) => quest.state === 'active' || quest.state === 'found');
+    const quest = this.mainQuest || activeSideQuest;
+    if (!quest) return;
+    const isMain = quest === this.mainQuest;
+    this.elements.questKind.textContent = isMain ? 'HAUPTQUEST' : 'NEBENQUEST';
+    this.elements.questTitle.textContent = quest.title;
+    this.elements.questObjective.textContent = quest.objective;
+    this.elements.questCard.classList.toggle('is-side-quest', !isMain);
+    if (animate) {
+      this.elements.questCard.classList.remove('is-updated');
+      requestAnimationFrame(() => this.elements.questCard.classList.add('is-updated'));
+      window.clearTimeout(this.questUpdateTimer);
+      this.questUpdateTimer = window.setTimeout(() => this.elements.questCard.classList.remove('is-updated'), 2800);
+    }
+  }
+
+  setMinimapMarker(marker, position, visible) {
+    marker.classList.toggle('hidden', !visible || !position);
+    if (!visible || !position) return;
+    marker.style.setProperty('--marker-x', `${position[0]}%`);
+    marker.style.setProperty('--marker-y', `${position[1]}%`);
+  }
+
+  showLocationToast(location) {
+    window.clearTimeout(this.locationToastTimer);
+    this.elements.locationToastName.textContent = location;
+    this.elements.locationToast.classList.remove('hidden', 'is-visible');
+    requestAnimationFrame(() => this.elements.locationToast.classList.add('is-visible'));
+    this.locationToastTimer = window.setTimeout(() => {
+      this.elements.locationToast.classList.remove('is-visible');
+      window.setTimeout(() => this.elements.locationToast.classList.add('hidden'), 260);
+    }, 2100);
   }
 
   showInteraction(label) {
