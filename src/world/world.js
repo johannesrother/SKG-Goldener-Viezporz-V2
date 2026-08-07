@@ -2284,8 +2284,8 @@ function addSideQuestLabel(parent, title, scale = 1) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
-  label.position.set(0, 2.78 * scale, 0);
-  label.scale.set(1.8 * scale, .44 * scale, 1);
+  label.position.set(0, 3.78 * scale, 0);
+  label.scale.set(3.15 * scale, .77 * scale, 1);
   label.visible = false;
   parent.add(label);
   return label;
@@ -2322,8 +2322,8 @@ function createSideQuestMarker(parent, scale = 1) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const marker = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
-  marker.position.set(0, 2.46 * scale, 0);
-  marker.scale.set(.64 * scale, .64 * scale, 1);
+  marker.position.set(0, 3.16 * scale, 0);
+  marker.scale.set(1.05 * scale, 1.05 * scale, 1);
   parent.add(marker);
   return marker;
 }
@@ -2373,6 +2373,7 @@ function createSideQuestCharacters(root) {
     person.rotation.y = definition.id === 'porta-photo' ? -.15 : Math.PI;
     const marker = createSideQuestMarker(person, look.scale);
     const label = addSideQuestLabel(person, definition.shortTitle, look.scale);
+    const homeMarker = createSideQuestTarget(root, definition.point, 1.1);
     const targetMarker = createSideQuestTarget(root, definition.target, definition.id === 'lost-plectrum' ? 2.25 : 1.0);
     let plectrum = null;
     if (definition.id === 'lost-plectrum') {
@@ -2398,6 +2399,7 @@ function createSideQuestCharacters(root) {
       state: 'available',
       marker,
       label,
+      homeMarker,
       targetMarker,
       plectrum,
       scale: look.scale,
@@ -3247,10 +3249,18 @@ export function createWorld(scene, quality = 'medium') {
       }
       applyCitizenActivity(person, time);
       const isAvailable = quest.state === 'available' || quest.state === 'discovered';
-      const nearby = person.position.distanceToSquared(playerPosition) < 42;
+      const nearby = person.position.distanceToSquared(playerPosition) < 26 * 26;
       quest.marker.visible = isAvailable;
-      quest.marker.position.y = 2.46 * quest.scale + Math.sin(time * 2.2 + index) * .045;
+      quest.marker.position.y = 3.16 * quest.scale + Math.sin(time * 2.2 + index) * .07;
+      const iconPulse = 1 + Math.sin(time * 3.1 + index) * .09;
+      quest.marker.scale.set(1.05 * quest.scale * iconPulse, 1.05 * quest.scale * iconPulse, 1);
       quest.label.visible = isAvailable && nearby;
+      quest.homeMarker.visible = isAvailable;
+      if (isAvailable) {
+        const homePulse = 1 + Math.sin(time * 2.7 + index) * .06;
+        quest.homeMarker.scale.setScalar(homePulse);
+        quest.homeMarker.userData.inner.material.opacity = .67 + Math.sin(time * 3.4 + index) * .14;
+      }
       const targetVisible = quest.state === 'active';
       quest.targetMarker.visible = targetVisible;
       if (targetVisible) {
