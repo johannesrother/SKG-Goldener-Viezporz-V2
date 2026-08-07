@@ -52,15 +52,15 @@ const boxGeometryCache = new Map();
 // Their hues deliberately overlap so moving across the city feels continuous,
 // while the stone scale and laying patterns make every district readable.
 const PAVEMENT_PROFILES = Object.freeze({
-  hauptmarkt: { cell: [0, 0], scale: 10.5, fallback: ['#d6a66f', '#f0ca90'] },
-  domfreihof: { cell: [1, 0], scale: 7.4, fallback: ['#b5ab95', '#e0d2b5'] },
-  porta: { cell: [2, 0], scale: 12.5, fallback: ['#d7b273', '#f2d69b'] },
-  simeon: { cell: [0, 1], scale: 6.6, fallback: ['#8d8777', '#c7b89c'] },
-  kornmarkt: { cell: [1, 1], scale: 4.25, fallback: ['#4a4a43', '#827765'] },
-  fleisch: { cell: [2, 1], scale: 3.25, fallback: ['#7b776c', '#b6ad98'] },
-  brot: { cell: [0, 2], scale: 3.8, fallback: ['#b58d57', '#e4c586'] },
-  christoph: { cell: [1, 2], scale: 9.0, fallback: ['#b7aa90', '#ded0b6'] },
-  margareten: { cell: [2, 2], scale: 3.7, fallback: ['#564937', '#8a7658'] },
+  hauptmarkt: { cell: [0, 0], scale: 4.4, fallback: ['#d6a66f', '#f0ca90'] },
+  domfreihof: { cell: [1, 0], scale: 4.7, fallback: ['#b5ab95', '#e0d2b5'] },
+  porta: { cell: [2, 0], scale: 4.1, fallback: ['#d7b273', '#f2d69b'] },
+  simeon: { cell: [0, 1], scale: 4.0, fallback: ['#8d8777', '#c7b89c'] },
+  kornmarkt: { cell: [1, 1], scale: 3.15, fallback: ['#4a4a43', '#827765'] },
+  fleisch: { cell: [2, 1], scale: 2.25, fallback: ['#7b776c', '#b6ad98'] },
+  brot: { cell: [0, 2], scale: 2.55, fallback: ['#b58d57', '#e4c586'] },
+  christoph: { cell: [1, 2], scale: 4.5, fallback: ['#b7aa90', '#ded0b6'] },
+  margareten: { cell: [2, 2], scale: 2.8, fallback: ['#564937', '#8a7658'] },
 });
 
 function roundedBoxGeometry(w, h, d, bevel = 0) {
@@ -2574,6 +2574,12 @@ function redrawPavementTile(entry) {
     drawFallbackPavingTile(context, profile);
   }
 
+  // A shared, transparent sandstone wash ties the nine local materials
+  // together. It keeps a lane change readable without producing the hard
+  // colour cuts of a texture test scene.
+  context.fillStyle = 'rgba(212, 184, 138, .075)';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
   // Fine sun-faded variation keeps the painted atlas from looking stamped.
   for (let index = 0; index < 48; index += 1) {
     const seed = index * 11.71 + profile.scale;
@@ -2697,7 +2703,8 @@ function pavingMaterial(width, depth, color, seed = 0, roughness = .9, profile =
     map.needsUpdate = true;
     return map;
   };
-  return material(color, {
+  const unifiedTint = new THREE.Color(color).lerp(new THREE.Color(0xffffff), .46);
+  return material(unifiedTint, {
     map: pavingTexture(width, depth, seed, profile),
     normalMap: configurePbrMap(pbr.normal, 53, 61),
     normalScale: new THREE.Vector2(.17, .17),
@@ -2913,7 +2920,6 @@ export function createWorld(scene, quality = 'medium') {
   ground.position.set(0, -.03, 5);
   ground.receiveShadow = true;
   root.add(ground);
-  addPavingVariation(root).position.set(0, 0, 5);
   addPavingRepairs(root);
 
   // The first playable sight is the Porta Nigra; the street then leads south
