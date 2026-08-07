@@ -184,6 +184,15 @@ export class GameUI {
     window.addEventListener('keydown', (event) => {
       if (event.code === 'KeyM') this.toggleMap();
       if (event.code === 'Escape') this.toggleMap(false);
+      // Dialogue choices need a deliberate click/tap, but a simple spoken
+      // line should be comfortably readable with one hand on the keyboard.
+      if (event.code === 'Enter' && !event.repeat && !this.elements.dialogue.classList.contains('hidden')) {
+        const next = this.elements.dialogue.querySelector('.dialogue-next');
+        if (next) {
+          event.preventDefault();
+          next.click();
+        }
+      }
     });
     this.bindJoystick();
   }
