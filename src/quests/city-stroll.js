@@ -210,7 +210,10 @@ export class CityStrollQuest {
 
   sideQuestEntries() {
     return SIDE_QUESTS
-      .filter((quest) => this.sideQuests[quest.id] !== 'available')
+      // The HUD deliberately shows every unfinished side quest from the
+      // beginning. They remain optional, but players can now see that the
+      // marked people at Porta, Hauptmarkt and Domfreihof are intentional.
+      .filter((quest) => this.sideQuests[quest.id] !== 'completed')
       .map((quest) => ({
         id: quest.id,
         title: quest.title,
