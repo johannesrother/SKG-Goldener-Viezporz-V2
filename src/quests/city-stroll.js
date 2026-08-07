@@ -1,10 +1,8 @@
 import {
-  AMBIENT_LINES,
   CHAPTER_TITLE,
   FINALE_MEMORIES,
   GROUP_CHAT,
   HIDDEN_HINTS,
-  RETURN_CONFLICT,
   SIDE_QUESTS,
   STORY_MOMENTS,
   STORY_STAGES,
@@ -53,7 +51,6 @@ export class CityStrollQuest {
       }
     });
     this.sideQuestTutorialSeen = Boolean(this.progress.sideQuestTutorialSeen);
-    this.returnConflictPlayed = false;
     this.syncSideQuests();
   }
 
@@ -312,13 +309,9 @@ export class CityStrollQuest {
       this.setPrompt(this.isNear(friend, position) ? `Mit ${stage.name} sprechen` : sidePrompt || discovery?.prompt || null);
     } else if (this.mode === 'return') {
       this.setPrompt(this.isNear(this.world.wineStandPoint, position, 3) ? 'Mit der Gruppe am Weinstand zusammensitzen' : sidePrompt || discovery?.prompt || null);
-      if (!this.returnConflictPlayed && frame.time >= this.nextAmbientAt) this.playReturnConflict();
     } else if (this.mode === 'portaReturn') {
       this.setPrompt(this.isNear(this.world.portaFinalePoint, position, 2.25) ? 'Den zweiten Viezporz ansehen' : sidePrompt || discovery?.prompt || null);
     }
-
-    const canChatOnWalk = ['explore', 'return', 'portaReturn'].includes(this.mode) && this.world.recruitedCount > 0;
-    if (canChatOnWalk && frame.time >= this.nextAmbientAt) this.playAmbient(frame);
   }
 
   setPrompt(label) {
@@ -472,26 +465,6 @@ export class CityStrollQuest {
     this.nextAmbientAt = this.currentTime + 38 + Math.random() * 22;
     this.setPrompt(null);
     if (!restoring) this.save();
-  }
-
-  playReturnConflict() {
-    this.returnConflictPlayed = true;
-    this.talking = true;
-    this.setPrompt(null);
-    this.callbacks.onDialogue?.(RETURN_CONFLICT, () => {
-      this.talking = false;
-      this.nextAmbientAt = this.currentTime + 58 + Math.random() * 32;
-    });
-  }
-
-  playAmbient(frame) {
-    const candidates = (AMBIENT_LINES[frame.location?.zone] || []).filter((line) => line.requires <= this.world.recruitedCount);
-    this.nextAmbientAt = frame.time + 50 + Math.random() * 40;
-    if (!candidates.length || this.talking) return;
-    const line = candidates[Math.floor(Math.random() * candidates.length)];
-    this.talking = true;
-    this.setPrompt(null);
-    this.callbacks.onDialogue?.([{ speaker: line.speaker, text: line.text }], () => { this.talking = false; });
   }
 
   beginWineStand() {
