@@ -443,7 +443,13 @@ export class GameEngine {
       Math.cos(this.player.rotation.y),
     );
     this.world.update(time, this.player.position, playerFacing);
-    this.callbacks.onFrame?.({ time, position: this.getPosition(), visitorCount: this.world.visitorCount, location: this.location });
+    this.callbacks.onFrame?.({
+      time,
+      position: this.getPosition(),
+      visitorCount: this.world.visitorCount,
+      location: this.location,
+      playerFacing: { x: playerFacing.x, z: playerFacing.z },
+    });
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
   }
