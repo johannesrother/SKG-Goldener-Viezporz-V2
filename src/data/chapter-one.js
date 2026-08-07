@@ -215,7 +215,10 @@ export const SIDE_QUESTS = [
     shortTitle: 'Wo ist der Dom?',
     npc: 'Touristenpaar',
     point: { x: 6.2, z: 8.0 },
-    target: { x: -45.5, z: 7.0 },
+    // An open patch of paving directly in front of the Dom. The former point
+    // sat among benches and planters, which made the arrival marker easy to
+    // miss and awkward to reach.
+    target: { x: -53.4, z: 1.2 },
     memory: 'Der Weg zum Dom',
     objective: 'Bringe die Touristen zum Domfreihof.',
     prompt: 'Optionale Nebenquest: Wo ist der Dom?',
