@@ -80,6 +80,10 @@ export class GameUI {
           <aside class="hud-objective" id="quest-card" aria-live="polite">
             <p class="hud-objective-kind" id="quest-kind">HAUPTQUEST</p><h2 id="quest-title">Ein Freitagabend in Trier</h2><p id="quest-objective">Triff Johannes am Weinstand.</p>
           </aside>
+          <aside class="hud-side-quests" id="side-quest-card" aria-live="polite" aria-label="Freiwillige Nebenquests">
+            <p class="hud-side-quest-heading"><span>✦</span> NEBENQUESTS <b id="side-quest-count">0</b></p>
+            <div class="hud-side-quest-list" id="side-quest-list"></div>
+          </aside>
           <button class="world-interact hidden" id="interact-button" aria-label="Mit Person sprechen"><kbd>E</kbd><span id="interact-label">Sprechen</span></button>
           <div class="mobile-controls"><div class="joystick" id="joystick" aria-label="Bewegen"><span>LAUFEN</span><i></i></div><button class="mobile-talk is-unavailable" id="mobile-interact" aria-label="Reden: Komm näher an eine Figur." data-hint="Komm näher an eine Figur." type="button" disabled><i>✦</i><span id="mobile-interact-text">REDEN</span></button></div>
         </section>
@@ -139,6 +143,9 @@ export class GameUI {
       questKind: this.app.querySelector('#quest-kind'),
       questTitle: this.app.querySelector('#quest-title'),
       questObjective: this.app.querySelector('#quest-objective'),
+      sideQuestCard: this.app.querySelector('#side-quest-card'),
+      sideQuestCount: this.app.querySelector('#side-quest-count'),
+      sideQuestList: this.app.querySelector('#side-quest-list'),
       interact: this.app.querySelector('#interact-button'),
       interactLabel: this.app.querySelector('#interact-label'),
       mobileInteract: this.app.querySelector('#mobile-interact'),
@@ -304,11 +311,32 @@ export class GameUI {
   }
 
   setSideQuests(quests = []) {
-    this.sideQuests = quests.filter((quest) => quest && quest.state !== 'available' && quest.state !== 'completed');
+    // Side quests should be discoverable before the player stands directly
+    // beside their NPC. Keeping available encounters in this compact HUD list
+    // makes the three voluntary moments feel present rather than lost.
+    this.sideQuests = quests.filter((quest) => quest && quest.state !== 'completed');
     const markerPositions = { 'porta-photo': ['47', '15'], 'lost-plectrum': ['39', '78'], 'find-the-dom': ['83', '57'] };
-    const nextSideQuest = this.sideQuests.find((quest) => quest.state === 'active' || quest.state === 'found') || this.sideQuests[0];
+    const nextSideQuest = this.sideQuests.find((quest) => ['active', 'found', 'discovered'].includes(quest.state)) || this.sideQuests[0];
     this.setMinimapMarker(this.elements.minimapSideMarker, markerPositions[nextSideQuest?.id], Boolean(nextSideQuest));
+    this.renderSideQuestList();
     this.renderObjective(false);
+  }
+
+  renderSideQuestList() {
+    const states = {
+      available: 'FREIWILLIG',
+      discovered: 'ENTDECKT',
+      active: 'AKTIV',
+      found: 'GEFUNDEN',
+      completed: 'ERLEDIGT',
+    };
+    this.elements.sideQuestCount.textContent = String(this.sideQuests.length);
+    this.elements.sideQuestCard.classList.toggle('hidden', this.sideQuests.length === 0);
+    this.elements.sideQuestList.innerHTML = this.sideQuests.map((quest) => `
+      <article class="hud-side-quest-entry is-${this.escape(quest.state)}">
+        <div><b>${this.escape(quest.title)}</b><p>${this.escape(quest.objective)}</p></div>
+        <em>${states[quest.state] || 'FREIWILLIG'}</em>
+      </article>`).join('');
   }
 
   renderObjective(animate) {
