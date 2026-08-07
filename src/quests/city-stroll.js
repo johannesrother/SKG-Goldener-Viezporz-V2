@@ -17,6 +17,7 @@ import {
 } from '../save/save-system.js';
 
 const PORTA_ARRIVAL = { x: -2, z: 68 };
+const ESCORT_QUEST_IDS = new Set(['porta-photo', 'find-the-dom']);
 
 function clampStage(index) {
   return Math.max(0, Math.min(STORY_STAGES.length - 1, Number(index) || 0));
@@ -40,6 +41,17 @@ export class CityStrollQuest {
     this.foundHints = new Set(this.progress.hints);
     this.memories = new Set(this.progress.memories);
     this.sideQuests = Object.fromEntries(SIDE_QUESTS.map(({ id }) => [id, this.progress.sideQuests?.[id] || 'available']));
+    this.sideQuestEscorts = Object.fromEntries(
+      SIDE_QUESTS.map(({ id }) => [id, Boolean(this.progress.sideQuestEscorts?.[id])]),
+    );
+    // Old saves did not distinguish an active objective from an escort that
+    // had actually been accepted. Return those old unfinished escorts to the
+    // clearly marked NPC instead of having them follow the player on load.
+    SIDE_QUESTS.forEach(({ id }) => {
+      if (ESCORT_QUEST_IDS.has(id) && this.sideQuests[id] === 'active' && !this.sideQuestEscorts[id]) {
+        this.sideQuests[id] = 'discovered';
+      }
+    });
     this.sideQuestTutorialSeen = Boolean(this.progress.sideQuestTutorialSeen);
     this.returnConflictPlayed = false;
     this.syncSideQuests();
@@ -63,6 +75,7 @@ export class CityStrollQuest {
       memories: [...this.memories],
       optionalEvents: [...this.completedEvents],
       sideQuests: { ...this.sideQuests },
+      sideQuestEscorts: { ...this.sideQuestEscorts },
       sideQuestTutorialSeen: this.sideQuestTutorialSeen,
       hints: [...this.foundHints],
     };
@@ -73,6 +86,7 @@ export class CityStrollQuest {
     clearChapterOneProgress();
     this.progress = createChapterOneProgress();
     this.sideQuests = Object.fromEntries(SIDE_QUESTS.map(({ id }) => [id, 'available']));
+    this.sideQuestEscorts = Object.fromEntries(SIDE_QUESTS.map(({ id }) => [id, false]));
     this.sideQuestTutorialSeen = false;
     this.syncSideQuests();
   }
@@ -209,7 +223,11 @@ export class CityStrollQuest {
   }
 
   syncSideQuests() {
-    SIDE_QUESTS.forEach((quest) => this.world.setSideQuestState?.(quest.id, this.sideQuests[quest.id] || 'available'));
+    SIDE_QUESTS.forEach((quest) => this.world.setSideQuestState?.(
+      quest.id,
+      this.sideQuests[quest.id] || 'available',
+      { escorting: Boolean(this.sideQuestEscorts[quest.id]) },
+    ));
     this.callbacks.onSideQuestChange?.(this.sideQuestEntries());
   }
 
@@ -382,6 +400,7 @@ export class CityStrollQuest {
 
   activateSideQuest(quest) {
     this.sideQuests[quest.id] = 'active';
+    if (ESCORT_QUEST_IDS.has(quest.id)) this.sideQuestEscorts[quest.id] = true;
     this.syncSideQuests();
     this.save();
     this.callbacks.onDialogue?.([
@@ -410,6 +429,7 @@ export class CityStrollQuest {
     this.talking = true;
     this.setPrompt(null);
     this.sideQuests[quest.id] = 'completed';
+    if (ESCORT_QUEST_IDS.has(quest.id)) this.sideQuestEscorts[quest.id] = false;
     this.syncSideQuests();
     this.save();
     const charlyJoins = quest.id === 'lost-plectrum' && this.world.questFriends?.charly?.userData.questFriend.recruited
