@@ -16,6 +16,10 @@ import {
 
 const PORTA_ARRIVAL = { x: -2, z: 68 };
 const ESCORT_QUEST_IDS = new Set(['porta-photo', 'find-the-dom']);
+// Older saved games can contain states from the first side-quest prototype.
+// Bump this only when an on-disk migration is needed, never for normal quest
+// completion, so returning players do not lose their current progress again.
+const SIDE_QUEST_DISPLAY_REVISION = 2;
 
 function clampStage(index) {
   return Math.max(0, Math.min(STORY_STAGES.length - 1, Number(index) || 0));
@@ -42,6 +46,18 @@ export class CityStrollQuest {
     this.sideQuestEscorts = Object.fromEntries(
       SIDE_QUESTS.map(({ id }) => [id, Boolean(this.progress.sideQuestEscorts?.[id])]),
     );
+    // The old marker implementation occasionally left optional encounters as
+    // completed in localStorage even though the player had never seen them.
+    // Restore those three small moments once, so the world markers reappear
+    // without asking players to clear their complete save manually.
+    this.sideQuestDisplayRevision = Number(this.progress.sideQuestDisplayRevision) || 0;
+    if (this.sideQuestDisplayRevision < SIDE_QUEST_DISPLAY_REVISION) {
+      SIDE_QUESTS.forEach(({ id }) => {
+        if (this.sideQuests[id] === 'completed') this.sideQuests[id] = 'available';
+        this.sideQuestEscorts[id] = false;
+      });
+      this.sideQuestDisplayRevision = SIDE_QUEST_DISPLAY_REVISION;
+    }
     // Old saves did not distinguish an active objective from an escort that
     // had actually been accepted. Return those old unfinished escorts to the
     // clearly marked NPC instead of having them follow the player on load.
@@ -73,6 +89,7 @@ export class CityStrollQuest {
       optionalEvents: [...this.completedEvents],
       sideQuests: { ...this.sideQuests },
       sideQuestEscorts: { ...this.sideQuestEscorts },
+      sideQuestDisplayRevision: this.sideQuestDisplayRevision,
       sideQuestTutorialSeen: this.sideQuestTutorialSeen,
       hints: [...this.foundHints],
     };
@@ -84,6 +101,7 @@ export class CityStrollQuest {
     this.progress = createChapterOneProgress();
     this.sideQuests = Object.fromEntries(SIDE_QUESTS.map(({ id }) => [id, 'available']));
     this.sideQuestEscorts = Object.fromEntries(SIDE_QUESTS.map(({ id }) => [id, false]));
+    this.sideQuestDisplayRevision = SIDE_QUEST_DISPLAY_REVISION;
     this.sideQuestTutorialSeen = false;
     this.syncSideQuests();
   }
