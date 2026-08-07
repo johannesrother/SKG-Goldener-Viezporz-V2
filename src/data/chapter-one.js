@@ -184,7 +184,9 @@ export const SIDE_QUESTS = [
     shortTitle: 'Das verlorene Plektrum',
     npc: 'Straßenmusiker',
     point: { x: 1.15, z: 39.4 },
-    target: { x: -2.15, z: 34.15 },
+    // A little detour down the paving, tucked beside a parked bicycle and a
+    // planter — visible only when the player actually looks around.
+    target: { x: -2.75, z: 30.45 },
     memory: 'Das verlorene Plektrum',
     objective: 'Suche in der Nähe des Straßenmusikers.',
     prompt: 'Optionale Nebenquest: Das verlorene Plektrum',
