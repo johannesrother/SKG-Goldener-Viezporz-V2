@@ -107,7 +107,7 @@ class HauptmarktSlice {
     if (now - this.lastUiUpdate < 350) return;
     this.lastUiUpdate = now;
     this.audio.setZone(frame.location?.zone || 'hauptmarkt');
-    this.ui.updateMarket(frame.visitorCount, frame.location);
+    this.ui.updateMarket(frame.visitorCount, frame.location, frame.playerFacing);
   }
 
   returnToMenu() {
