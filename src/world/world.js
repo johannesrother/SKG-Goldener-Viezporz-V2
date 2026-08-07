@@ -1424,7 +1424,10 @@ function addPortaSimeonEdge(parent, quality) {
   // edge. A gentle diagonal links it to the existing southern shopping street
   // without turning the square into a maze of rigid, game-like corridors.
   const connector = new THREE.Mesh(new THREE.PlaneGeometry(7.55, 15.0), pavingMaterial(7.55, 15.0, 0xd4b98e, 386, .88, 'simeon'));
-  connector.rotation.set(-Math.PI / 2, 1.01, 0);
+  // A PlaneGeometry starts upright.  Turning it on Y after pitching it over
+  // tilts its normal back into the air; use Z for the diagonal instead so the
+  // connector always remains flush with the paving at the Porta forecourt.
+  connector.rotation.set(-Math.PI / 2, 0, 1.01);
   connector.position.set(6.0, -.015, 58.3);
   street.add(connector);
   const paving = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 30.2), pavingMaterial(7.6, 30.2, 0xd3b88f, 387, .88, 'simeon'));
