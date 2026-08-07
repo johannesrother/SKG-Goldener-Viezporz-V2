@@ -29,10 +29,16 @@ const shared = {
   pupil: new THREE.SphereGeometry(0.024, 8, 6),
   nose: new THREE.SphereGeometry(0.042, 9, 7),
   ear: new THREE.SphereGeometry(0.048, 9, 7),
+  brow: new THREE.CapsuleGeometry(0.014, 0.094, 5, 7),
+  eyelid: new THREE.SphereGeometry(0.052, 10, 7),
   hairLock: new THREE.SphereGeometry(0.085, 10, 8),
+  hairCurl: new THREE.SphereGeometry(0.064, 9, 7),
   beard: new THREE.SphereGeometry(0.15, 12, 8),
   collar: new THREE.TorusGeometry(0.118, 0.018, 6, 12),
   hood: new THREE.TorusGeometry(0.19, 0.042, 7, 14),
+  belt: new THREE.TorusGeometry(0.16, 0.012, 6, 14),
+  button: new THREE.SphereGeometry(0.016, 7, 6),
+  shoeLace: new THREE.CapsuleGeometry(0.008, 0.09, 4, 6),
   clothingTrim: new THREE.CylinderGeometry(0.011, 0.011, 0.24, 6),
   pigeon: new THREE.SphereGeometry(0.075, 9, 7),
 };
@@ -99,8 +105,14 @@ function characterMaterial(color, kind = 'fabric') {
     : kind === 'hair'
       ? { roughness: .82, metalness: 0 }
       : kind === 'skin'
-        ? { roughness: .72, metalness: 0 }
-        : { roughness: .72, metalness: 0 };
+        ? { roughness: .67, metalness: 0, emissive: new THREE.Color(color).multiplyScalar(.025) }
+        : kind === 'eye'
+          ? { roughness: .24, metalness: .04, emissive: 0x16120e, emissiveIntensity: .08 }
+          : kind === 'iris'
+            ? { roughness: .32, metalness: .02, emissive: new THREE.Color(color).multiplyScalar(.07) }
+            : kind === 'leather'
+              ? { roughness: .48, metalness: .03 }
+              : { roughness: .72, metalness: 0 };
   const result = new THREE.MeshStandardMaterial({
     color,
     map: kind === 'fabric' || kind === 'denim' ? getFabricTexture() : null,
@@ -309,34 +321,42 @@ function getStuccoTexture() {
 
 function getFabricTexture() {
   if (fabricTexture) return fabricTexture;
+  // A painted weave gives hoodies, denim and jackets a tactile finish without
+  // adding a texture download per character. Tinting supplies the individual
+  // wardrobe colours while this one small canvas supplies the fibre detail.
   const canvas = document.createElement('canvas');
-  canvas.width = 192;
-  canvas.height = 192;
+  canvas.width = 256;
+  canvas.height = 256;
   const context = canvas.getContext('2d');
-  context.fillStyle = '#a8a09a';
+  context.fillStyle = '#a59c90';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.globalAlpha = .17;
-  context.strokeStyle = '#736d68';
-  context.lineWidth = 1;
-  for (let stripe = -192; stripe < 384; stripe += 8) {
+  for (let thread = -256; thread < 512; thread += 7) {
+    context.strokeStyle = thread % 14 === 0 ? 'rgba(55, 47, 42, .17)' : 'rgba(246, 230, 203, .10)';
+    context.lineWidth = 1;
     context.beginPath();
-    context.moveTo(stripe, 0);
-    context.lineTo(stripe - 192, 192);
+    context.moveTo(thread, 0);
+    context.lineTo(thread - 256, 256);
     context.stroke();
   }
-  context.strokeStyle = '#f2e4d5';
-  for (let stripe = 0; stripe < 384; stripe += 11) {
+  for (let thread = -256; thread < 512; thread += 9) {
+    context.strokeStyle = 'rgba(74, 65, 58, .095)';
     context.beginPath();
-    context.moveTo(stripe, 0);
-    context.lineTo(stripe - 192, 192);
+    context.moveTo(thread, 256);
+    context.lineTo(thread - 256, 0);
     context.stroke();
   }
-  context.globalAlpha = 1;
+  for (let fleck = 0; fleck < 980; fleck += 1) {
+    const seed = fleck * 11.71;
+    const light = 116 + Math.floor(hash(seed) * 72);
+    context.fillStyle = `rgba(${light + 14}, ${light + 7}, ${Math.max(58, light - 2)}, ${.025 + hash(seed + 4) * .065})`;
+    const size = .45 + hash(seed + 8) * 1.9;
+    context.fillRect(hash(seed + 12) * canvas.width, hash(seed + 15) * canvas.height, size, size);
+  }
   fabricTexture = new THREE.CanvasTexture(canvas);
   fabricTexture.colorSpace = THREE.SRGBColorSpace;
   fabricTexture.wrapS = THREE.RepeatWrapping;
   fabricTexture.wrapT = THREE.RepeatWrapping;
-  fabricTexture.repeat.set(1.75, 1.75);
+  fabricTexture.repeat.set(1.45, 1.45);
   fabricTexture.anisotropy = 4;
   return fabricTexture;
 }
@@ -1880,31 +1900,42 @@ function addDomfreihof(parent, quality) {
   return court;
 }
 
+const WARDROBE_VARIANTS = ['hoodie', 'jacket', 'tee', 'overshirt', 'pullover', 'cardigan'];
+const HAIRSTYLE_VARIANTS = ['swept', 'ponytail', 'curly', 'bob', 'bun'];
+
+function variantFrom(value, variants, seed) {
+  if (typeof value === 'string' && variants.includes(value)) return value;
+  if (Number.isInteger(value)) return variants[Math.abs(value) % variants.length];
+  return variants[Math.floor(hash(seed) * variants.length) % variants.length];
+}
+
 function createCitizen(index, options = {}) {
   const scale = options.scale || (.74 + hash(index + 4) * .34);
-  const build = .88 + hash(index + 41) * .22;
+  const build = options.build || (.88 + hash(index + 41) * .22);
+  const detail = options.detail || (index >= 500 ? 'hero' : 'crowd');
+  const isHero = detail === 'hero';
+  const wardrobe = variantFrom(options.wardrobe, WARDROBE_VARIANTS, index + 97);
+  const hairstyle = variantFrom(options.hairstyle, HAIRSTYLE_VARIANTS, index + 59);
   const person = new THREE.Group();
   person.name = options.name || `Marktbesucher ${index + 1}`;
-  const skin = characterMaterial(choose(PALETTE.skin, index + 1), 'skin');
+  const skin = characterMaterial(options.skin ?? choose(PALETTE.skin, index + 1), 'skin');
   const outfit = characterMaterial(options.outfit ?? choose(PALETTE.outfit, index + 7), 'fabric');
-  const shirt = characterMaterial(choose([0xe5d6bd, 0xd2d5ca, 0xc9b08b, 0xd5a99c, 0xb8c7bd], index + 111), 'fabric');
-  const accent = characterMaterial(choose([0xf0d3a1, 0xd99062, 0xa8c09b, 0xc9aec3, 0x9fb8c5], index + 121), 'fabric');
+  const shirt = characterMaterial(options.shirt ?? choose([0xe5d6bd, 0xd2d5ca, 0xc9b08b, 0xd5a99c, 0xb8c7bd], index + 111), 'fabric');
+  const accent = characterMaterial(options.accent ?? choose([0xf0d3a1, 0xd99062, 0xa8c09b, 0xc9aec3, 0x9fb8c5], index + 121), 'fabric');
   const hair = characterMaterial(options.hair ?? choose(PALETTE.hair, index + 21), 'hair');
-  const trousers = characterMaterial(choose(PALETTE.trousers, index + 3), 'denim');
-  const shoeMaterial = characterMaterial(choose([0xf0e0bd, 0x38413e, 0x8d6047, 0x4a515e, 0xd2b17d], index + 91), 'fabric');
-  const eyeWhite = characterMaterial(0xf4e4d1, 'eye');
-  const pupil = characterMaterial(0x29241f, 'pupil');
-  const mouth = characterMaterial(0x8c5045, 'mouth');
-  // A four-look cycle guarantees a varied crowd even when the same area is
-  // viewed from afar: hoodie, jacket, T-shirt and longer overshirt.
-  const wardrobe = index % 4;
-  const bodyMaterial = wardrobe === 2 ? shirt : outfit;
-  const sleeveMaterial = wardrobe === 2 ? shirt : outfit;
-  const limbs = { arms: [], legs: [], body: null, bodyScaleY: scale, head: null };
+  const trousers = characterMaterial(options.trousers ?? choose(PALETTE.trousers, index + 3), 'denim');
+  const shoeMaterial = characterMaterial(options.shoes ?? choose([0xf0e0bd, 0x38413e, 0x8d6047, 0x4a515e, 0xd2b17d], index + 91), 'leather');
+  const eyeWhite = characterMaterial(0xf9efe2, 'eye');
+  const iris = characterMaterial(options.eyes ?? choose([0x5b7167, 0x7c5234, 0x466584, 0x7f8050], index + 131), 'iris');
+  const pupil = characterMaterial(0x201b1a, 'pupil');
+  const eyeCatch = characterMaterial(0xfff4df, 'eye');
+  const mouth = characterMaterial(options.lips ?? 0x8c5045, 'mouth');
+  const brow = characterMaterial(options.hair ?? choose(PALETTE.hair, index + 21), 'hair');
+  const limbs = { arms: [], legs: [], eyes: [], brows: [], body: null, bodyScaleY: scale, head: null };
   const armsBySide = {};
 
-  // Leg and shoe groups rotate at the hip: the silhouette stays softly
-  // rounded, while the feet and jeans now move together instead of sliding.
+  // Legs, hips and footwear use rounded parts instead of cubes. A small cuff
+  // and laces give the model a recognisable modern silhouette at close range.
   for (const side of [-1, 1]) {
     const legRoot = new THREE.Group();
     legRoot.position.set(side * .135 * scale, .87 * scale, 0);
@@ -1912,10 +1943,23 @@ function createCitizen(index, options = {}) {
     leg.scale.setScalar(scale);
     leg.position.y = -.45 * scale;
     legRoot.add(leg);
+    if (isHero) {
+      const cuff = characterMesh(shared.collar, shirt);
+      cuff.rotation.x = Math.PI / 2;
+      cuff.scale.set(.48 * scale, .48 * scale, .48 * scale);
+      cuff.position.y = -.64 * scale;
+      legRoot.add(cuff);
+    }
     const shoe = characterMesh(shared.shoe, shoeMaterial);
-    shoe.scale.set(.94 * scale, .58 * scale, 1.42 * scale);
-    shoe.position.set(0, -.75 * scale, .045 * scale);
+    shoe.scale.set(.98 * scale, .59 * scale, 1.48 * scale);
+    shoe.position.set(0, -.75 * scale, .05 * scale);
     legRoot.add(shoe);
+    if (isHero) {
+      const lace = characterMesh(shared.shoeLace, characterMaterial(0xf2e0c8, 'fabric'));
+      lace.rotation.z = Math.PI / 2;
+      lace.position.set(0, -.735 * scale, .132 * scale);
+      legRoot.add(lace);
+    }
     person.add(legRoot);
     limbs.legs.push(legRoot);
   }
@@ -1924,31 +1968,40 @@ function createCitizen(index, options = {}) {
   hips.scale.set(.86 * scale * build, .45 * scale, .67 * scale);
   hips.position.y = .86 * scale;
   person.add(hips);
+  if (isHero) {
+    const belt = characterMesh(shared.belt, characterMaterial(0x493a30, 'leather'));
+    belt.rotation.x = Math.PI / 2;
+    belt.scale.set(.93 * scale * build, .67 * scale, .75 * scale * build);
+    belt.position.y = .97 * scale;
+    person.add(belt);
+  }
 
+  const bodyMaterial = wardrobe === 'tee' ? shirt : outfit;
+  const sleeveMaterial = wardrobe === 'tee' ? shirt : outfit;
   const body = characterMesh(shared.torso, bodyMaterial);
   body.scale.set(scale * build, scale, scale * build);
   body.position.y = 1.12 * scale;
   person.add(body);
   limbs.body = body;
 
-  // Clothing layers make each outfit legible rather than treating colour as
-  // the only variation. They stay deliberately rounded and light-weight.
-  if (wardrobe === 0) {
+  // Each clothing archetype has its own silhouette. The trim and soft layers
+  // communicate fabric, not armour, and are limited to a few shared meshes.
+  if (wardrobe === 'hoodie') {
     const hood = characterMesh(shared.hood, outfit);
     hood.rotation.x = Math.PI / 2;
     hood.position.set(0, 1.4 * scale, -.15 * scale);
     hood.scale.setScalar(scale * build);
     person.add(hood);
-    const pocket = characterMesh(shared.head, accent);
-    pocket.scale.set(.44 * scale * build, .12 * scale, .047 * scale);
-    pocket.position.set(0, 1.0 * scale, .25 * scale);
+    const pocket = characterMesh(shared.head, outfit);
+    pocket.scale.set(.47 * scale * build, .13 * scale, .052 * scale);
+    pocket.position.set(0, 1.0 * scale, .255 * scale);
     person.add(pocket);
     for (const side of [-1, 1]) {
       const drawstring = characterMesh(shared.clothingTrim, accent);
       drawstring.position.set(side * .065 * scale, 1.34 * scale, .273 * scale);
       person.add(drawstring);
     }
-  } else if (wardrobe === 1) {
+  } else if (wardrobe === 'jacket') {
     const shirtFront = characterMesh(shared.head, shirt);
     shirtFront.scale.set(.25 * scale * build, .37 * scale, .057 * scale);
     shirtFront.position.set(0, 1.15 * scale, .252 * scale);
@@ -1963,65 +2016,140 @@ function createCitizen(index, options = {}) {
     const zipper = characterMesh(shared.clothingTrim, characterMaterial(0xc9ad7b, 'zipper'));
     zipper.position.set(0, 1.13 * scale, .325 * scale);
     person.add(zipper);
-  } else if (wardrobe === 2) {
+  } else if (wardrobe === 'tee') {
     const collar = characterMesh(shared.collar, accent);
     collar.rotation.x = Math.PI / 2;
     collar.scale.setScalar(scale);
     collar.position.y = 1.48 * scale;
     person.add(collar);
-  } else {
+    const hem = characterMesh(shared.clothingTrim, accent);
+    hem.rotation.z = Math.PI / 2;
+    hem.scale.y = 2.2 * scale * build;
+    hem.position.set(0, .96 * scale, .244 * scale);
+    person.add(hem);
+  } else if (wardrobe === 'overshirt') {
     const coatTail = characterMesh(shared.torso, outfit);
-    coatTail.scale.set(.92 * scale * build, .72 * scale, .8 * scale);
-    coatTail.position.y = .93 * scale;
+    coatTail.scale.set(.93 * scale * build, .78 * scale, .82 * scale);
+    coatTail.position.y = .92 * scale;
     person.add(coatTail);
-    const scarf = characterMesh(shared.hood, accent);
-    scarf.rotation.x = Math.PI / 2;
-    scarf.scale.setScalar(.84 * scale);
-    scarf.position.set(0, 1.46 * scale, .01 * scale);
-    person.add(scarf);
-    const scarfEnd = characterMesh(shared.arm, accent);
-    scarfEnd.scale.set(.42 * scale, .72 * scale, .4 * scale);
-    scarfEnd.position.set(.08 * scale, 1.17 * scale, .284 * scale);
-    person.add(scarfEnd);
+    const collar = characterMesh(shared.collar, shirt);
+    collar.rotation.x = Math.PI / 2;
+    collar.scale.setScalar(1.07 * scale);
+    collar.position.y = 1.47 * scale;
+    person.add(collar);
+    for (let button = 0; button < 3; button += 1) {
+      const fastener = characterMesh(shared.button, accent);
+      fastener.position.set(0, (1.29 - button * .13) * scale, .29 * scale);
+      person.add(fastener);
+    }
+  } else if (wardrobe === 'pullover') {
+    const collar = characterMesh(shared.collar, accent);
+    collar.rotation.x = Math.PI / 2;
+    collar.scale.setScalar(1.1 * scale);
+    collar.position.y = 1.46 * scale;
+    person.add(collar);
+    for (const side of [-1, 1]) {
+      const knitLine = characterMesh(shared.clothingTrim, accent);
+      knitLine.rotation.z = side * .36;
+      knitLine.position.set(side * .135 * scale, 1.18 * scale, .274 * scale);
+      person.add(knitLine);
+    }
+  } else {
+    const cardiganFront = characterMesh(shared.head, outfit);
+    cardiganFront.scale.set(.54 * scale * build, .7 * scale, .06 * scale);
+    cardiganFront.position.set(0, 1.13 * scale, .257 * scale);
+    person.add(cardiganFront);
+    const shirtOpening = characterMesh(shared.clothingTrim, shirt);
+    shirtOpening.position.set(0, 1.16 * scale, .326 * scale);
+    person.add(shirtOpening);
+    for (let button = 0; button < 3; button += 1) {
+      const fastener = characterMesh(shared.button, accent);
+      fastener.position.set(0, (1.28 - button * .13) * scale, .333 * scale);
+      person.add(fastener);
+    }
   }
 
-  // Arms are grouped at the shoulders, allowing an idle sway and a walking
-  // swing without replacing a static character with a skeletal rig.
+  // Arm roots keep the existing animation system, but a short sleeve and a
+  // softly shaped hand make a T-shirt read differently from a jacket.
   for (const side of [-1, 1]) {
     const armRoot = new THREE.Group();
     armRoot.position.set(side * .305 * scale * build, 1.39 * scale, 0);
     armRoot.rotation.z = side * .1;
     const sleeve = characterMesh(shared.arm, sleeveMaterial);
-    sleeve.scale.setScalar(scale);
+    const sleeveLength = wardrobe === 'tee' ? .58 : 1;
+    sleeve.scale.set(scale, scale * sleeveLength, scale);
     sleeve.position.y = -.2 * scale;
     armRoot.add(sleeve);
+    if (wardrobe === 'tee') {
+      const forearm = characterMesh(shared.arm, skin);
+      forearm.scale.set(scale * .78, scale * .42, scale * .78);
+      forearm.position.y = -.38 * scale;
+      armRoot.add(forearm);
+    }
     const hand = characterMesh(shared.hand, skin);
-    hand.scale.set(.83 * scale, scale, .82 * scale);
+    hand.scale.set(.84 * scale, scale, .83 * scale);
     hand.position.set(0, -.455 * scale, .02 * scale);
     armRoot.add(hand);
+    if (isHero) {
+      const thumb = characterMesh(shared.hand, skin);
+      thumb.scale.set(.38 * scale, .57 * scale, .33 * scale);
+      thumb.position.set(side * .058 * scale, -.43 * scale, .072 * scale);
+      armRoot.add(thumb);
+    }
     person.add(armRoot);
     limbs.arms.push(armRoot);
     armsBySide[side] = armRoot;
   }
 
-  // The face is intentionally warm and readable from the isometric camera:
-  // eyes, pupils, nose, ears and a tiny mouth give each citizen a direction
-  // and personality without a heavy character-texture atlas.
+  // Eyes are built in their own small roots. That lets them blink and glance
+  // without introducing a skeleton or an expensive character animation clip.
   const headRoot = new THREE.Group();
   headRoot.position.y = 1.67 * scale;
-  const faceWidth = .94 + hash(index + 52) * .12;
+  const faceWidth = options.faceWidth || (.94 + hash(index + 52) * .12);
   const head = characterMesh(shared.head, skin);
   head.scale.set(scale * faceWidth, scale, scale * faceWidth);
   headRoot.add(head);
+  if (isHero) {
+    const blush = characterMaterial(options.blush ?? 0xbf735f, 'skin');
+    for (const side of [-1, 1]) {
+      const cheek = characterMesh(shared.hairLock, blush);
+      cheek.scale.set(.34 * scale, .16 * scale, .055 * scale);
+      cheek.position.set(side * .125 * scale, -.07 * scale, .22 * scale);
+      headRoot.add(cheek);
+    }
+  }
   for (const side of [-1, 1]) {
+    const eyeRoot = new THREE.Group();
+    eyeRoot.position.set(side * .078 * scale, .045 * scale, .207 * scale);
     const eye = characterMesh(shared.eye, eyeWhite);
     eye.scale.setScalar(scale);
-    eye.position.set(side * .078 * scale, .045 * scale, .207 * scale);
-    headRoot.add(eye);
+    eyeRoot.add(eye);
     const eyePupil = characterMesh(shared.pupil, pupil);
-    eyePupil.scale.setScalar(scale);
-    eyePupil.position.set(side * .078 * scale, .044 * scale, .245 * scale);
-    headRoot.add(eyePupil);
+    eyePupil.scale.set(isHero ? .72 * scale : .94 * scale, isHero ? .72 * scale : .94 * scale, .62 * scale);
+    eyePupil.position.z = isHero ? .059 * scale : .043 * scale;
+    if (isHero) {
+      const eyeIris = characterMesh(shared.pupil, iris);
+      eyeIris.scale.set(1.17 * scale, 1.17 * scale, .7 * scale);
+      eyeIris.position.z = .039 * scale;
+      eyeRoot.add(eyeIris);
+    }
+    eyeRoot.add(eyePupil);
+    if (isHero) {
+      const highlight = characterMesh(shared.pupil, eyeCatch);
+      highlight.scale.set(.28 * scale, .28 * scale, .2 * scale);
+      highlight.position.set(side * -.01 * scale, .012 * scale, .074 * scale);
+      eyeRoot.add(highlight);
+    }
+    headRoot.add(eyeRoot);
+    limbs.eyes.push(eyeRoot);
+    if (isHero) {
+      const eyebrow = characterMesh(shared.brow, brow);
+      eyebrow.rotation.z = side * -.2;
+      eyebrow.scale.setScalar(scale);
+      eyebrow.position.set(side * .082 * scale, .112 * scale, .22 * scale);
+      headRoot.add(eyebrow);
+      limbs.brows.push(eyebrow);
+    }
     const ear = characterMesh(shared.ear, skin);
     ear.scale.set(.62 * scale, scale, .55 * scale);
     ear.position.set(side * .222 * scale * faceWidth, -.01 * scale, 0);
@@ -2031,58 +2159,112 @@ function createCitizen(index, options = {}) {
   nose.scale.set(.78 * scale, 1.1 * scale, .9 * scale);
   nose.position.set(0, -.035 * scale, .23 * scale);
   headRoot.add(nose);
-  const smile = characterMesh(shared.hand, mouth);
-  smile.scale.set(.46 * scale, .14 * scale, .18 * scale);
-  smile.position.set(0, -.105 * scale, .226 * scale);
-  headRoot.add(smile);
+  const upperLip = characterMesh(shared.hand, mouth);
+  upperLip.scale.set(.43 * scale, .105 * scale, .16 * scale);
+  upperLip.position.set(0, -.105 * scale, .226 * scale);
+  headRoot.add(upperLip);
+  const lowerLip = characterMesh(shared.hand, mouth);
+  lowerLip.scale.set(.34 * scale, .07 * scale, .12 * scale);
+  lowerLip.position.set(0, -.13 * scale, .228 * scale);
+  headRoot.add(lowerLip);
 
   const hairCap = characterMesh(shared.hair, hair);
-  hairCap.scale.setScalar(scale * 1.02);
+  hairCap.scale.setScalar(scale * 1.035);
   hairCap.position.y = .05 * scale;
   headRoot.add(hairCap);
-  const hairstyle = Math.floor(hash(index + 59) * 3);
-  if (hairstyle !== 2) {
-    for (const [x, y, z] of [[-.1, .08, .17], [0, .115, .19], [.1, .08, .17]]) {
+  if (hairstyle === 'swept') {
+    for (const [x, y, z] of [[-.12, .085, .17], [-.035, .13, .2], [.07, .1, .185], [.145, .055, .145]]) {
       const lock = characterMesh(shared.hairLock, hair);
-      lock.scale.set(.72 * scale, .85 * scale, .5 * scale);
+      lock.scale.set(.74 * scale, .9 * scale, .5 * scale);
       lock.position.set(x * scale, y * scale, z * scale);
       headRoot.add(lock);
     }
-  }
-  if (hairstyle === 1) {
+  } else if (hairstyle === 'ponytail') {
+    for (const [x, y, z] of [[-.1, .07, .16], [0, .11, .18], [.1, .07, .16]]) {
+      const lock = characterMesh(shared.hairLock, hair);
+      lock.scale.set(.72 * scale, .82 * scale, .48 * scale);
+      lock.position.set(x * scale, y * scale, z * scale);
+      headRoot.add(lock);
+    }
     const ponytail = characterMesh(shared.hairLock, hair);
-    ponytail.scale.set(.88 * scale, 1.15 * scale, .75 * scale);
-    ponytail.position.set(0, -.02 * scale, -.21 * scale);
+    ponytail.scale.set(.94 * scale, 1.3 * scale, .76 * scale);
+    ponytail.position.set(.02 * scale, -.04 * scale, -.22 * scale);
     headRoot.add(ponytail);
+  } else if (hairstyle === 'curly') {
+    [[-.11, .1, .14], [0, .15, .17], [.11, .1, .14], [-.15, .035, .07], [.15, .035, .07]].forEach(([x, y, z]) => {
+      const curl = characterMesh(shared.hairCurl, hair);
+      curl.scale.set(.9 * scale, 1.06 * scale, .76 * scale);
+      curl.position.set(x * scale, y * scale, z * scale);
+      headRoot.add(curl);
+    });
+  } else if (hairstyle === 'bob') {
+    for (const side of [-1, 1]) {
+      const sideLock = characterMesh(shared.hairLock, hair);
+      sideLock.scale.set(.82 * scale, 1.28 * scale, .64 * scale);
+      sideLock.position.set(side * .18 * scale, -.045 * scale, .015 * scale);
+      headRoot.add(sideLock);
+    }
+    const fringe = characterMesh(shared.hairLock, hair);
+    fringe.scale.set(1.35 * scale, .75 * scale, .45 * scale);
+    fringe.position.set(-.025 * scale, .08 * scale, .18 * scale);
+    headRoot.add(fringe);
+  } else {
+    const fringe = characterMesh(shared.hairLock, hair);
+    fringe.scale.set(1.36 * scale, .58 * scale, .45 * scale);
+    fringe.position.set(0, .1 * scale, .175 * scale);
+    headRoot.add(fringe);
+    const bun = characterMesh(shared.hairLock, hair);
+    bun.scale.set(.88 * scale, .95 * scale, .72 * scale);
+    bun.position.set(0, .12 * scale, -.21 * scale);
+    headRoot.add(bun);
   }
-  if (hash(index + 67) > .78) {
-    const cap = characterMesh(new THREE.SphereGeometry(.245, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), characterMaterial(choose([0x4d6b65, 0x805a44, 0x3c4d62], index + 71), 'fabric'));
-    cap.scale.setScalar(scale * 1.03);
-    cap.position.y = .1 * scale;
-    headRoot.add(cap);
-  }
-  if (hash(index + 83) > .69) {
+  const facialHair = options.facialHair || (!isHero && hash(index + 83) > .69 ? 'short' : 'none');
+  if (facialHair === 'short' || facialHair === 'beard') {
     const beard = characterMesh(shared.beard, hair);
-    beard.scale.set(.83 * scale, .5 * scale, .3 * scale);
-    beard.position.set(0, -.12 * scale, .198 * scale);
+    beard.scale.set(.84 * scale, facialHair === 'beard' ? .72 * scale : .46 * scale, .3 * scale);
+    beard.position.set(0, -.13 * scale, .198 * scale);
     headRoot.add(beard);
+  }
+  if (options.accessory === 'glasses') {
+    const glasses = characterMaterial(0x3a3430, 'leather');
+    for (const side of [-1, 1]) {
+      const frame = characterMesh(new THREE.TorusGeometry(.054, .008, 5, 10), glasses);
+      frame.scale.setScalar(scale);
+      frame.position.set(side * .078 * scale, .047 * scale, .257 * scale);
+      headRoot.add(frame);
+    }
+    const bridge = characterMesh(shared.clothingTrim, glasses);
+    bridge.rotation.z = Math.PI / 2;
+    bridge.scale.y = .56 * scale;
+    bridge.position.set(0, .047 * scale, .257 * scale);
+    headRoot.add(bridge);
   }
   person.add(headRoot);
   limbs.head = headRoot;
 
+  if (options.accessory === 'bag') {
+    const satchel = characterMesh(roundedBoxGeometry(.22, .22, .075, .025), characterMaterial(0x6d5038, 'leather'));
+    satchel.position.set(.28 * scale * build, .96 * scale, .2 * scale);
+    person.add(satchel);
+    const strap = characterMesh(shared.hood, characterMaterial(0x6d5038, 'leather'));
+    strap.rotation.x = Math.PI / 2;
+    strap.scale.set(.85 * scale, 1.18 * scale, .85 * scale);
+    strap.position.set(.04 * scale, 1.18 * scale, .03 * scale);
+    person.add(strap);
+  }
   if (options.phone) {
-    const phone = characterMesh(new THREE.BoxGeometry(.07, .14, .02), characterMaterial(0x15202a, 'phone'));
+    const phone = characterMesh(roundedBoxGeometry(.07, .14, .02, .008), characterMaterial(0x15202a, 'phone'));
     phone.position.set(.02 * scale, -.42 * scale, .08 * scale);
     phone.rotation.z = -.45;
     armsBySide[1].add(phone);
   }
   if (options.drink) {
-    const cup = characterMesh(new THREE.CylinderGeometry(.055, .065, .16, 8), characterMaterial(0xf3e5c9, 'cup'));
+    const cup = characterMesh(new THREE.CylinderGeometry(.055, .065, .16, 10), characterMaterial(0xf3e5c9, 'cup'));
     cup.position.set(.02 * scale, -.5 * scale, .08 * scale);
     armsBySide[-1].add(cup);
   }
   if (options.guitar) {
-    const guitar = characterMesh(new THREE.SphereGeometry(.19, 12, 8), characterMaterial(0xbd7431, 'guitar'));
+    const guitar = characterMesh(new THREE.SphereGeometry(.19, 14, 10), characterMaterial(0xbd7431, 'leather'));
     guitar.scale.set(.78, 1.12, .28);
     guitar.position.set(.16 * scale, 1.0 * scale, .25 * scale);
     person.add(guitar);
@@ -2104,13 +2286,14 @@ function createCitizen(index, options = {}) {
   }
   const outfitMeshes = [];
   const hairMeshes = [];
+  const playerOutfitMaterials = new Set([outfit, bodyMaterial, sleeveMaterial]);
   person.traverse((object) => {
     if (!object.isMesh) return;
-    if (object.material === outfit) outfitMeshes.push(object);
+    if (playerOutfitMaterials.has(object.material)) outfitMeshes.push(object);
     if (object.material === hair) hairMeshes.push(object);
   });
   person.userData = {
-    mode: options.mode || 'stand', phase: index * .79, route: options.route || [], home: options.home || new THREE.Vector3(), limbs,
+    mode: options.mode || 'stand', phase: index * .79, route: options.route || [], home: options.home || new THREE.Vector3(), limbs, detail,
     style: { outfitMeshes, hairMeshes },
   };
   return person;
@@ -2136,6 +2319,19 @@ export function animateCharacterPose(person, time, walking = false) {
   limbs.body.scale.y = limbs.bodyScaleY * (walking ? 1 : 1 + Math.sin(time * 1.55 + phase) * .006);
   limbs.head.rotation.y = walking ? Math.sin(time * 2.3 + phase) * .035 : Math.sin(time * .52 + phase) * .13;
   limbs.head.rotation.x = walking ? .015 : Math.sin(time * .75 + phase) * .018;
+  // A tiny, deterministic blink cycle and a slower eye drift make the face
+  // feel present even while the player simply watches the square. It remains
+  // procedural, so every citizen avoids a separate animation clip.
+  const blinkCycle = (time * .235 + phase * .037) % 1;
+  const blink = blinkCycle < .058 ? 1 - Math.sin((blinkCycle / .058) * Math.PI) * .86 : 1;
+  const gaze = walking ? Math.sin(time * 1.7 + phase) * .025 : Math.sin(time * .47 + phase) * .055;
+  limbs.eyes?.forEach((eye) => {
+    eye.scale.y = blink;
+    eye.rotation.y = gaze;
+  });
+  limbs.brows?.forEach((brow, index) => {
+    brow.rotation.z = (index === 0 ? .2 : -.2) + Math.sin(time * .52 + phase + index) * .018;
+  });
 }
 
 function applyCitizenActivity(person, time) {
@@ -2163,7 +2359,10 @@ function applyCitizenActivity(person, time) {
 }
 
 export function makePerson({ name = 'Spieler', outfit = 0x506b42, hair = 0x553524, scale = 1 } = {}) {
-  const player = createCitizen(500, { name, outfit, hair, scale, mode: 'player' });
+  const player = createCitizen(500, {
+    name, outfit, hair, scale, mode: 'player', detail: 'hero', wardrobe: 'hoodie', hairstyle: 'swept',
+    accent: 0xd6ba82, trousers: 0x304357, shoes: 0x3e3a35, eyes: 0x586d5a,
+  });
   // The subtle selection ring is a classic isometric-RPG cue. It gives the
   // player a reliable visual anchor without turning the world into an arcade.
   const marker = new THREE.Mesh(
@@ -2206,7 +2405,12 @@ function createPigeons(parent, x, z) {
   return pigeons;
 }
 
-function createQuestFriend(root, { id, name, spot, x, z, outfit, scale, seed, drink = false }) {
+function createQuestFriend(root, definition) {
+  const {
+    id, name, spot, x, z, outfit, scale, seed, drink = false,
+    hair, shirt, accent, trousers, shoes, eyes, wardrobe, hairstyle,
+    facialHair, accessory, build, skin, faceWidth,
+  } = definition;
   const friend = createCitizen(seed, {
     name,
     outfit,
@@ -2214,6 +2418,20 @@ function createQuestFriend(root, { id, name, spot, x, z, outfit, scale, seed, dr
     mode: 'quest',
     home: new THREE.Vector3(x, 0, z),
     drink,
+    hair,
+    shirt,
+    accent,
+    trousers,
+    shoes,
+    eyes,
+    wardrobe,
+    hairstyle,
+    facialHair,
+    accessory,
+    build,
+    skin,
+    faceWidth,
+    detail: 'hero',
   });
   friend.position.set(x, 0, z);
   friend.rotation.y = Math.PI;
@@ -2272,14 +2490,34 @@ function createQuestFriends(root) {
   return {
     // Each meeting point is deliberately a clear patch of paving just in
     // front of its landmark – never inside a stand, fountain or façade.
-    johannes: createQuestFriend(root, { id: 'johannes', name: 'Johannes', spot: 'WEINSTAND', x: -10.2, z: .15, outfit: 0x375f48, scale: 1.05, seed: 701, drink: true }),
-    marc: createQuestFriend(root, { id: 'marc', name: 'Marc', spot: 'DOMFREIHOF', x: -47.0, z: 2.8, outfit: 0x415475, scale: 1.1, seed: 702 }),
+    johannes: createQuestFriend(root, {
+      id: 'johannes', name: 'Johannes', spot: 'WEINSTAND', x: -10.2, z: .15, outfit: 0x3f6a4f, shirt: 0xd5c5a9,
+      accent: 0xd9b16a, trousers: 0x2f4557, shoes: 0x4a4039, hair: 0x5b3827, eyes: 0x556a48,
+      wardrobe: 'hoodie', hairstyle: 'swept', accessory: 'bag', scale: 1.05, build: 1.02, seed: 701, drink: true,
+    }),
+    marc: createQuestFriend(root, {
+      id: 'marc', name: 'Marc', spot: 'DOMFREIHOF', x: -47.0, z: 2.8, outfit: 0x36465d, shirt: 0xd4d8d0,
+      accent: 0x9da9a1, trousers: 0x30363d, shoes: 0x3a3632, hair: 0x2f2524, eyes: 0x516b72,
+      wardrobe: 'jacket', hairstyle: 'swept', facialHair: 'short', accessory: 'glasses', scale: 1.1, build: 1.08, seed: 702,
+    }),
     // Jürgen deliberately waits in the quiet eastern side street.  This keeps
     // his encounter distinct from the busy north–south Simeonstraße and makes
     // Margaretengäßchen a real stop in the evening walk.
-    juergen: createQuestFriend(root, { id: 'juergen', name: 'Jürgen', spot: 'MARGARETENGÄSSCHEN', x: 27.0, z: 69.0, outfit: 0x72554a, scale: .98, seed: 703 }),
-    charly: createQuestFriend(root, { id: 'charly', name: 'Charly', spot: 'KORNMARKT', x: 4.0, z: -69.0, outfit: 0xa66f31, scale: 1.04, seed: 704, drink: true }),
-    weber: createQuestFriend(root, { id: 'weber', name: 'Weber', spot: 'FLEISCHSTRASSE', x: 12.0, z: -27.8, outfit: 0x604842, scale: 1.08, seed: 705 }),
+    juergen: createQuestFriend(root, {
+      id: 'juergen', name: 'Jürgen', spot: 'MARGARETENGÄSSCHEN', x: 27.0, z: 69.0, outfit: 0x716754, shirt: 0xc7c1ad,
+      accent: 0x8d9c8b, trousers: 0x4a4a43, shoes: 0x60483b, hair: 0x45352c, eyes: 0x6b6549,
+      wardrobe: 'overshirt', hairstyle: 'bob', accessory: 'bag', scale: .98, build: .93, seed: 703,
+    }),
+    charly: createQuestFriend(root, {
+      id: 'charly', name: 'Charly', spot: 'KORNMARKT', x: 4.0, z: -69.0, outfit: 0xa66f31, shirt: 0xe0d4bc,
+      accent: 0x5c725b, trousers: 0x303f55, shoes: 0xe0d5bb, hair: 0x6b3d29, eyes: 0x5d7351,
+      wardrobe: 'tee', hairstyle: 'curly', scale: 1.04, build: .97, seed: 704, drink: true,
+    }),
+    weber: createQuestFriend(root, {
+      id: 'weber', name: 'Weber', spot: 'FLEISCHSTRASSE', x: 12.0, z: -27.8, outfit: 0x5f5951, shirt: 0xcfc5b3,
+      accent: 0xb89f6d, trousers: 0x3f4341, shoes: 0x4c4038, hair: 0x777269, eyes: 0x647063,
+      wardrobe: 'cardigan', hairstyle: 'bun', facialHair: 'beard', accessory: 'glasses', scale: 1.08, build: 1.04, seed: 705,
+    }),
   };
 }
 
@@ -2398,9 +2636,18 @@ function createSideQuestTarget(root, point, radius = .9, label = '') {
 
 function createSideQuestCharacters(root) {
   const details = {
-    'porta-photo': { seed: 811, outfit: 0x75564c, hair: 0x4e3326, mode: 'photo', phone: true, scale: 1.02 },
-    'lost-plectrum': { seed: 812, outfit: 0x3f635d, hair: 0x34221d, mode: 'music', guitar: true, scale: 1.05 },
-    'find-the-dom': { seed: 813, outfit: 0x586b87, hair: 0x764b31, mode: 'tourist', phone: true, scale: 1.0 },
+    'porta-photo': {
+      seed: 811, outfit: 0x75564c, shirt: 0xe2d0b5, accent: 0xb8a37a, hair: 0x4e3326, eyes: 0x5f725e,
+      wardrobe: 'jacket', hairstyle: 'bob', accessory: 'bag', mode: 'photo', phone: true, scale: 1.02,
+    },
+    'lost-plectrum': {
+      seed: 812, outfit: 0x3f635d, shirt: 0xd9d3c1, accent: 0xc98b45, hair: 0x34221d, eyes: 0x64748b,
+      wardrobe: 'overshirt', hairstyle: 'curly', mode: 'music', guitar: true, scale: 1.05,
+    },
+    'find-the-dom': {
+      seed: 813, outfit: 0x586b87, shirt: 0xe0d2bb, accent: 0xc89a62, hair: 0x764b31, eyes: 0x786344,
+      wardrobe: 'pullover', hairstyle: 'ponytail', accessory: 'bag', mode: 'tourist', phone: true, scale: 1.0,
+    },
   };
   return Object.fromEntries(SIDE_QUESTS.map((definition) => {
     const look = details[definition.id];
@@ -2412,6 +2659,13 @@ function createSideQuestCharacters(root) {
       phone: look.phone,
       guitar: look.guitar,
       scale: look.scale,
+      shirt: look.shirt,
+      accent: look.accent,
+      eyes: look.eyes,
+      wardrobe: look.wardrobe,
+      hairstyle: look.hairstyle,
+      accessory: look.accessory,
+      detail: 'hero',
       home: new THREE.Vector3(definition.point.x, 0, definition.point.z),
     });
     person.name = `${definition.npc} – optionale Nebenquest`;
